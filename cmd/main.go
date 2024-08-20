@@ -1,20 +1,18 @@
 package main
 
 import (
-	"fmt"
 	"os"
 	"strconv"
 
-	"github.com/joho/godotenv"
+	_ "github.com/joho/godotenv/autoload"
 	"github.com/thanhhaudev/github-stats/pkg/writer"
 )
 
-func init() {
-	godotenv.Load()
-}
-
 func main() {
-	fmt.Println(getStats())
+	err := writer.UpdateReadme(getStats(), os.Getenv("SECTION_NAME"))
+	if err != nil {
+		panic(err)
+	}
 }
 
 func getStats() string {

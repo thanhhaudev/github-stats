@@ -3,6 +3,7 @@ package writer
 import (
 	"fmt"
 	"math"
+	"os"
 	"strings"
 
 	"github.com/thanhhaudev/github-stats/pkg/github"
@@ -18,6 +19,29 @@ type Data struct {
 	Name        string
 	Description string
 	Percent     float64
+}
+
+// UpdateReadme updates the README.md file with the provided stats
+func UpdateReadme(u, n string) error {
+	f := "README.md"
+	b, err := os.ReadFile("README.md")
+	if err != nil {
+		return err
+	}
+
+	s := fmt.Sprintf("<!--START_SECTION:%s-->", n)
+	e := fmt.Sprintf("<!--END_SECTION:%s-->", n)
+
+	si := strings.Index(string(b), s)
+	ei := strings.Index(string(b), e)
+
+	if si == -1 || ei == -1 {
+		return fmt.Errorf("section tags not found in README.md")
+	}
+
+	u = string(b)[:si+len(s)] + "\n" + u + "\n" + string(b)[ei:]
+
+	return os.WriteFile(f, []byte(u), 0644)
 }
 
 // MakeLanguagePerRepoList returns a list of languages and the percentage of repositories that use them
@@ -43,16 +67,13 @@ func MakeLanguagePerRepoList(r []github.Repository) string {
 		return ""
 	}
 
-	// find top language
+	// Create a list of Data structs
 	for k, v := range c {
-		if v > m {
+		if v > m { // find top language
 			m = v
 			t = k
 		}
-	}
 
-	// Create a list of Data structs
-	for k, v := range c {
 		d = append(d, Data{
 			Name: k,
 			Description: fmt.Sprintf("%d %s", v, func() string {
@@ -79,6 +100,8 @@ func makeList(d ...Data) string {
 		b.WriteString(formatData(v))
 	}
 
+	b.WriteString("\n")
+
 	return b.String()
 }
 
@@ -102,7 +125,6 @@ func formatData(v Data) string {
 	b.WriteString(makeGraph(v.Percent))
 	b.WriteString("   ")
 	b.WriteString(formatPercent(v.Percent))
-	b.WriteString("\n")
 
 	return b.String()
 }
