@@ -9,17 +9,19 @@ import (
 	"github.com/thanhhaudev/github-stats/pkg/writer"
 )
 
+const repoPerPage = 25
+
 type DataContainer struct {
 	ClientManager *ClientManager
 	Data          struct {
-		Viewer            *github.Viewer
-		OwnedRepositories []github.Repository
+		Viewer       *github.Viewer
+		Repositories []github.Repository
 	}
 }
 
 func (d *DataContainer) GetWidgets() map[string]string {
 	return map[string]string{
-		"LANGUAGE_PER_REPO": writer.MakeLanguagePerRepoList(d.Data.OwnedRepositories),
+		"LANGUAGE_PER_REPO": writer.MakeLanguagePerRepoList(d.Data.Repositories),
 	}
 }
 
@@ -47,18 +49,37 @@ func (d *DataContainer) InitViewer() {
 	d.Data.Viewer = v
 }
 
-func (d *DataContainer) InitOwnedRepositories() {
-	r, err := d.ClientManager.GetOwnedRepositories(d.Data.Viewer.Login, 25)
+// InitRepositories initializes the repositories
+// owned and contributed to by the user
+func (d *DataContainer) InitRepositories() {
+	r, err := d.ClientManager.GetOwnedRepositories(d.Data.Viewer.Login, repoPerPage)
 	if err != nil {
 		panic(err)
 	}
 
-	d.Data.OwnedRepositories = r
+	// Get the unique URLs of the repositories
+	u := make(map[string]bool)
+	for _, repo := range r {
+		u[repo.Url] = true
+	}
+
+	c, err := d.ClientManager.GetContributedToRepositories(d.Data.Viewer.Login, repoPerPage)
+	if err != nil {
+		panic(err)
+	}
+
+	for _, repo := range c {
+		if _, ok := u[repo.Url]; !ok { // Only add the repository if it is not already in the list
+			r = append(r, repo)
+		}
+	}
+
+	d.Data.Repositories = r
 }
 
 func (d *DataContainer) Build() {
 	d.InitViewer()
-	d.InitOwnedRepositories()
+	d.InitRepositories()
 
 	time.Sleep(time.Second)
 }

@@ -10,7 +10,7 @@ type ClientManager struct {
 	GitHubClient   *github.GitHub
 }
 
-// GetOwnedRepositories returns the repositories owned by the user
+// GetOwnedRepositories returns the repositories owned or collaborated on by the user
 func (c *ClientManager) GetOwnedRepositories(username string, numRepos int) ([]github.Repository, error) {
 	var allRepos []github.Repository
 	var cursor *string
@@ -24,6 +24,36 @@ func (c *ClientManager) GetOwnedRepositories(username string, numRepos int) ([]g
 		}
 
 		repos, err := c.GitHubClient.Repositories.Owned(request)
+		if err != nil {
+			return nil, err
+		}
+
+		allRepos = append(allRepos, repos.Nodes...)
+
+		if !repos.PageInfo.HasNextPage {
+			break
+		}
+
+		cursor = &repos.PageInfo.EndCursor
+	}
+
+	return allRepos, nil
+}
+
+// GetContributedToRepositories returns the repositories contributed to by the user
+func (c *ClientManager) GetContributedToRepositories(username string, numRepos int) ([]github.Repository, error) {
+	var allRepos []github.Repository
+	var cursor *string
+
+	for {
+		request := github.NewRequest(github.Queries["repositoriesContributedTo"])
+		request.Var("username", username)
+		request.Var("numRepos", numRepos)
+		if cursor != nil {
+			request.Var("afterCursor", *cursor)
+		}
+
+		repos, err := c.GitHubClient.Repositories.ContributedTo(request)
 		if err != nil {
 			return nil, err
 		}

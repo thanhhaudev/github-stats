@@ -6,6 +6,7 @@ type RepositoryService struct {
 
 type Repository struct {
 	Name            string `json:"name"`
+	Url             string `json:"url"`
 	IsPrivate       bool   `json:"isPrivate"`
 	IsFork          bool   `json:"isFork"`
 	PrimaryLanguage *struct {

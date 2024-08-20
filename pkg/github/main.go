@@ -7,6 +7,7 @@ var Queries = map[string]string{
 		repositoriesContributedTo(first: $numRepos, after: $afterCursor, orderBy: {field: CREATED_AT, direction: DESC}, includeUserRepositories: true) {
 		  nodes {
 			name
+			url
 			isPrivate
 			isFork
 			primaryLanguage {
@@ -26,6 +27,7 @@ var Queries = map[string]string{
 		repositories(first: $numRepos, after: $afterCursor, orderBy: {field: CREATED_AT, direction: DESC}, affiliations: [OWNER, COLLABORATOR], isFork: false) {
 			nodes {
 				name
+				url
 				isPrivate
 				isFork
 					primaryLanguage {
