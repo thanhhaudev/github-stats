@@ -3,9 +3,11 @@ package main
 import (
 	"fmt"
 	"math"
+	"os"
 	"strings"
 
 	"github.com/joho/godotenv"
+	"github.com/thanhhaudev/github-stats/pkg/github"
 )
 
 const (
@@ -25,7 +27,67 @@ func init() {
 }
 
 func main() {
+	fmt.Println(getStats())
+}
 
+func getStats() string {
+	c := NewClientManager(os.Getenv("WAKATIME_API_KEY"), os.Getenv("GITHUB_TOKEN"))
+
+	r, err := c.GetOwnedRepositories(os.Getenv("GITHUB_USERNAME"), 1)
+	if err != nil {
+		panic(err)
+	}
+
+	return makeLanguagePerRepoList(r)
+}
+
+// makeLanguagePerRepoList returns a list of languages and the percentage of repositories that use them
+func makeLanguagePerRepoList(r []github.Repository) string {
+	var (
+		l float64
+		t string
+		m int
+		d []Data
+		c = make(map[string]int)
+	)
+
+	for _, v := range r {
+		if v.PrimaryLanguage == nil {
+			continue // Skip repositories without a primary language
+		}
+
+		c[v.PrimaryLanguage.Name]++
+		l++
+	}
+
+	if len(c) == 0 {
+		return ""
+	}
+
+	// find top language
+	for k, v := range c {
+		if v > m {
+			m = v
+			t = k
+		}
+	}
+
+	// Create a list of Data structs
+	for k, v := range c {
+		d = append(d, Data{
+			Name: k,
+			Description: fmt.Sprintf("%d %s", v, func() string {
+				if v > 1 {
+					return "repos"
+				}
+
+				return "repo"
+			}()),
+			Percent: math.Round(float64(c[k]) / l * 100),
+		})
+	}
+
+	return fmt.Sprintf("**I Mostly Code in %s**\n\n", t) + "```text" + makeList(d...) + "```\n\n"
 }
 
 func makeList(d ...Data) string {
@@ -61,6 +123,7 @@ func formatData(v Data) string {
 	b.WriteString(makeGraph(v.Percent))
 	b.WriteString("   ")
 	b.WriteString(formatPercent(v.Percent))
+	b.WriteString("\n")
 
 	return b.String()
 }
