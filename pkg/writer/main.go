@@ -2,9 +2,10 @@ package writer
 
 import (
 	"fmt"
-	"github.com/thanhhaudev/github-stats/pkg/github"
 	"math"
 	"strings"
+
+	"github.com/thanhhaudev/github-stats/pkg/github"
 )
 
 const (
