@@ -20,7 +20,15 @@ func main() {
 func getStats() string {
 	c := NewClientManager(os.Getenv("WAKATIME_API_KEY"), os.Getenv("GITHUB_TOKEN"))
 	n, _ := strconv.Atoi(os.Getenv("PER_PAGE"))
-	r, err := c.GetOwnedRepositories(os.Getenv("GITHUB_USERNAME"), n)
+
+	// Get the user's information
+	v, err := c.GetViewer()
+	if err != nil {
+		panic(err)
+	}
+
+	// Get the repositories owned by the user
+	r, err := c.GetOwnedRepositories(v.Login, n)
 	if err != nil {
 		panic(err)
 	}

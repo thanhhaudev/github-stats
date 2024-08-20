@@ -40,6 +40,17 @@ func (c *ClientManager) GetOwnedRepositories(username string, numRepos int) ([]g
 	return allRepos, nil
 }
 
+// GetViewer returns the viewer's information
+func (c *ClientManager) GetViewer() (*github.Viewer, error) {
+	request := github.NewRequest(github.Queries["viewer"])
+	viewer, err := c.GitHubClient.Viewer.Get(request)
+	if err != nil {
+		return nil, err
+	}
+
+	return viewer, nil
+}
+
 // NewClientManager creates a new ClientManager
 func NewClientManager(wakaTimeApiKey, gitHubApiKey string) *ClientManager {
 	return &ClientManager{

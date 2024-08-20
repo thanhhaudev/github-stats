@@ -39,10 +39,20 @@ var Queries = map[string]string{
 		}
 	  }
 	}`,
+	// viewer: returns the viewer's information
+	"viewer": `query {
+	  viewer {
+		login
+		name
+		email
+		createdAt
+	  }
+	}`,
 }
 
 type GitHub struct {
 	Repositories *RepositoryService
+	Viewer       *ViewerService
 }
 
 type PageInfo struct {
@@ -56,5 +66,6 @@ func NewGitHub(token string) *GitHub {
 
 	return &GitHub{
 		Repositories: &RepositoryService{client},
+		Viewer:       &ViewerService{client},
 	}
 }
