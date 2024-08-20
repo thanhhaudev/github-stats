@@ -87,7 +87,7 @@ func MakeLanguagePerRepoList(r []github.Repository) string {
 		})
 	}
 
-	return fmt.Sprintf("**I Mostly Code in %s**\n\n", t) + "```text" + makeList(d...) + "```\n\n"
+	return fmt.Sprintf("**I mostly code in %s**\n\n", t) + "```text" + makeList(d...) + "```\n\n"
 }
 
 func makeList(d ...Data) string {
