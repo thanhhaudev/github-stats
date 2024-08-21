@@ -5,6 +5,7 @@ type ViewerService struct {
 }
 
 type Viewer struct {
+	ID        string `json:"id"`
 	Login     string `json:"login"`
 	Name      string `json:"name"`
 	Email     string `json:"email"`

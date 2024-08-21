@@ -1,30 +1,37 @@
-package main
+package container
 
 import (
+	"fmt"
 	"os"
 	"strings"
-	"time"
 
 	"github.com/thanhhaudev/github-stats/pkg/github"
 	"github.com/thanhhaudev/github-stats/pkg/writer"
 )
 
-const repoPerPage = 25
+const (
+	repoPerQuery   = 25
+	branchPerQuery = 30
+	commitPerQuery = 100
+)
 
 type DataContainer struct {
 	ClientManager *ClientManager
 	Data          struct {
 		Viewer       *github.Viewer
 		Repositories []github.Repository
+		Commits      []github.Commit
 	}
 }
 
+// GetWidgets returns the widgets to display
 func (d *DataContainer) GetWidgets() map[string]string {
 	return map[string]string{
 		"LANGUAGE_PER_REPO": writer.MakeLanguagePerRepoList(d.Data.Repositories),
 	}
 }
 
+// GetStats returns the statistics
 func (d *DataContainer) GetStats() string {
 	b := strings.Builder{}
 	w := d.GetWidgets()
@@ -40,6 +47,7 @@ func (d *DataContainer) GetStats() string {
 	return b.String()
 }
 
+// InitViewer initializes the viewer
 func (d *DataContainer) InitViewer() {
 	v, err := d.ClientManager.GetViewer()
 	if err != nil {
@@ -52,7 +60,7 @@ func (d *DataContainer) InitViewer() {
 // InitRepositories initializes the repositories
 // owned and contributed to by the user
 func (d *DataContainer) InitRepositories() {
-	r, err := d.ClientManager.GetOwnedRepositories(d.Data.Viewer.Login, repoPerPage)
+	r, err := d.ClientManager.GetOwnedRepositories(d.Data.Viewer.Login, repoPerQuery)
 	if err != nil {
 		panic(err)
 	}
@@ -63,7 +71,7 @@ func (d *DataContainer) InitRepositories() {
 		u[repo.Url] = true
 	}
 
-	c, err := d.ClientManager.GetContributedToRepositories(d.Data.Viewer.Login, repoPerPage)
+	c, err := d.ClientManager.GetContributedToRepositories(d.Data.Viewer.Login, repoPerQuery)
 	if err != nil {
 		panic(err)
 	}
@@ -77,11 +85,30 @@ func (d *DataContainer) InitRepositories() {
 	d.Data.Repositories = r
 }
 
+// InitCommits initializes the branches of the repositories
+func (d *DataContainer) InitCommits() {
+	for _, repo := range d.Data.Repositories {
+		b, err := d.ClientManager.GetBranches(repo.Owner.Login, repo.Name, branchPerQuery)
+		if err != nil {
+			panic(err)
+		}
+
+		for _, branch := range b {
+			commits, err := d.ClientManager.GetCommits(repo.Owner.Login, repo.Name, d.Data.Viewer.ID, fmt.Sprintf("refs/heads/%s", branch.Name), commitPerQuery)
+			if err != nil {
+				panic(err)
+			}
+
+			d.Data.Commits = append(d.Data.Commits, commits...)
+		}
+	}
+}
+
+// Build builds the data container
 func (d *DataContainer) Build() {
 	d.InitViewer()
 	d.InitRepositories()
-
-	time.Sleep(time.Second)
+	d.InitCommits()
 }
 
 // NewDataContainer creates a new DataContainer
