@@ -26,8 +26,11 @@ type DataContainer struct {
 
 // GetWidgets returns the widgets to display
 func (d *DataContainer) GetWidgets() map[string]string {
+	data := d.CalculateCommits()
+
 	return map[string]string{
-		"LANGUAGE_PER_REPO": writer.MakeLanguagePerRepoList(d.Data.Repositories),
+		"LANGUAGE_PER_REPO":   writer.MakeLanguagePerRepoList(d.Data.Repositories),
+		"COMMIT_DAYS_OF_WEEK": writer.MakeCommitDaysOfWeekList(data.DailyCommits, data.TotalCommits),
 	}
 }
 

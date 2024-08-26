@@ -5,6 +5,7 @@ import (
 	"math"
 	"os"
 	"strings"
+	"time"
 
 	"github.com/thanhhaudev/github-stats/pkg/github"
 )
@@ -42,6 +43,45 @@ func UpdateReadme(u, n string) error {
 	u = string(b)[:si+len(s)] + "\n" + u + "\n" + string(b)[ei:]
 
 	return os.WriteFile(f, []byte(u), 0644)
+}
+
+func MakeCommitDaysOfWeekList(wd map[time.Weekday]int, total int) string {
+	var (
+		topName string
+		topVal  int
+		data    []Data
+	)
+
+	weekdays := []time.Weekday{
+		time.Sunday,
+		time.Monday,
+		time.Tuesday,
+		time.Wednesday,
+		time.Thursday,
+		time.Friday,
+		time.Saturday,
+	}
+
+	for _, weekday := range weekdays {
+		if wd[weekday] > topVal {
+			topVal = wd[weekday]
+			topName = weekday.String()
+		}
+
+		data = append(data, Data{
+			Name: weekday.String(),
+			Description: fmt.Sprintf("%d %s", wd[weekday], func() string {
+				if wd[weekday] > 1 {
+					return "commits"
+				}
+
+				return "commit"
+			}()),
+			Percent: float64(wd[weekday]) / float64(total) * 100,
+		})
+	}
+
+	return fmt.Sprintf("**📅 I'm Most Productive on %s**\n\n", topName) + "```text" + makeList(data...) + "```\n\n"
 }
 
 // MakeLanguagePerRepoList returns a list of languages and the percentage of repositories that use them
