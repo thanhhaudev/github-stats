@@ -87,11 +87,11 @@ func MakeCommitDaysOfWeekList(wd map[time.Weekday]int, total int) string {
 // MakeLanguagePerRepoList returns a list of languages and the percentage of repositories that use them
 func MakeLanguagePerRepoList(r []github.Repository) string {
 	var (
-		l float64
-		t string
-		m int
-		d []Data
-		c = make(map[string]int)
+		count   float64
+		topName string
+		topNum  int
+		data    []Data
+		repos   = make(map[string]int)
 	)
 
 	for _, v := range r {
@@ -99,35 +99,35 @@ func MakeLanguagePerRepoList(r []github.Repository) string {
 			continue // Skip repositories without a primary language
 		}
 
-		c[v.PrimaryLanguage.Name]++
-		l++
+		repos[v.PrimaryLanguage.Name]++
+		count++
 	}
 
-	if len(c) == 0 {
+	if len(repos) == 0 {
 		return ""
 	}
 
 	// Create a list of Data structs
-	for k, v := range c {
-		if v > m { // find top language
-			m = v
-			t = k
+	for name, num := range repos {
+		if num > topNum { // find top language
+			topNum = num
+			topName = name
 		}
 
-		d = append(d, Data{
-			Name: k,
-			Description: fmt.Sprintf("%d %s", v, func() string {
-				if v > 1 {
+		data = append(data, Data{
+			Name: name,
+			Description: fmt.Sprintf("%d %s", num, func() string {
+				if num > 1 {
 					return "repos"
 				}
 
 				return "repo"
 			}()),
-			Percent: math.Round(float64(c[k]) / l * 100),
+			Percent: float64(repos[name]) / count * 100,
 		})
 	}
 
-	return fmt.Sprintf("**I Mostly Code in %s**\n\n", t) + "```text" + makeList(d...) + "```\n\n"
+	return fmt.Sprintf("**🔥 I Mostly Code in %s**\n\n", topName) + "```text" + makeList(data...) + "```\n\n"
 }
 
 func makeList(d ...Data) string {
