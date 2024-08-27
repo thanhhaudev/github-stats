@@ -45,6 +45,74 @@ func UpdateReadme(u, n string) error {
 	return os.WriteFile(f, []byte(u), 0644)
 }
 
+// MakeCommitTimeOfDayList returns a list of commits made during different times of the day
+func MakeCommitTimeOfDayList(commits []github.Commit) string {
+	timeRanges := map[string][2]int{
+		"Morning": {6, 12},
+		"Daytime": {12, 18},
+		"Evening": {18, 24},
+		"Night":   {0, 6},
+	}
+
+	counts := map[string]int{
+		"Morning": 0,
+		"Daytime": 0,
+		"Evening": 0,
+		"Night":   0,
+	}
+
+	total := len(commits)
+
+	for _, commit := range commits {
+		hour := commit.CommittedDate.Hour()
+		for period, rangeHours := range timeRanges {
+			if hour >= rangeHours[0] && hour < rangeHours[1] {
+				counts[period]++
+				break
+			}
+		}
+	}
+
+	var data []Data
+	var topName string
+	var topVal int
+	var longTimeNames = []string{
+		"Morning",
+		"Daytime",
+		"Evening",
+		"Night",
+	}
+
+	for _, period := range longTimeNames {
+		count := counts[period]
+		if count > topVal {
+			topVal = count
+			topName = period
+		}
+
+		data = append(data, Data{
+			Name: period,
+			Description: fmt.Sprintf("%d %s", count, func() string {
+				if count > 1 {
+					return "commits"
+				}
+				return "commit"
+			}()),
+			Percent: float64(count) / float64(total) * 100,
+		})
+	}
+
+	topNames := map[string]string{
+		"Morning": "An Early Bird 🐣",
+		"Daytime": "An Afternoon Warrior 🥷🏻",
+		"Evening": "A Twilight Taskmaster 🌆",
+		"Night":   "A Night Owl 🦉",
+	}
+
+	return fmt.Sprintf("**🕒 I'm %s**\n\n", topNames[topName]) + "```text" + makeList(data...) + "```\n\n"
+}
+
+// MakeCommitDaysOfWeekList returns a list of commits made on each day of the week
 func MakeCommitDaysOfWeekList(wd map[time.Weekday]int, total int) string {
 	var (
 		topName string

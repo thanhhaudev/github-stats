@@ -31,6 +31,7 @@ func (d *DataContainer) GetWidgets() map[string]string {
 	return map[string]string{
 		"LANGUAGE_PER_REPO":   writer.MakeLanguagePerRepoList(d.Data.Repositories),
 		"COMMIT_DAYS_OF_WEEK": writer.MakeCommitDaysOfWeekList(data.DailyCommits, data.TotalCommits),
+		"COMMIT_TIME_OF_DAY":  writer.MakeCommitTimeOfDayList(d.Data.Commits),
 	}
 }
 
