@@ -1,6 +1,9 @@
 package wakatime
 
-import "fmt"
+import (
+	"context"
+	"fmt"
+)
 
 type StatsService struct {
 	*Client
@@ -32,10 +35,10 @@ const (
 )
 
 // Get retrieves the user's coding activity statistics
-func (s *StatsService) Get(r StatsRange) (*Stats, error) {
+func (s *StatsService) Get(ctx context.Context, r StatsRange) (*Stats, error) {
 	var stats Stats
 
-	err := s.Client.get(fmt.Sprintf("users/current/stats/%s", r), nil, &stats)
+	err := s.Client.GetWithContext(ctx, fmt.Sprintf("users/current/stats/%s", r), nil, &stats)
 	if err != nil {
 		return nil, err
 	}

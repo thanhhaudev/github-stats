@@ -2,6 +2,7 @@ package github
 
 import (
 	"bytes"
+	"context"
 	"encoding/json"
 	"fmt"
 	"net/http"
@@ -51,6 +52,30 @@ func (c *Client) Post(req *Request, v interface{}) error {
 	if err != nil {
 		return err
 	}
+
+	return c.do(httpReq, v)
+}
+
+// PostWithContext makes a POST request with a context
+func (c *Client) PostWithContext(ctx context.Context, req *Request, v interface{}) error {
+	// Check if the context is already canceled
+	select {
+	case <-ctx.Done():
+		return ctx.Err()
+	default:
+	}
+	
+	payload := new(bytes.Buffer)
+	if err := json.NewEncoder(payload).Encode(req); err != nil {
+		return err
+	}
+
+	httpReq, err := c.newRequest(http.MethodPost, c.origin, payload)
+	if err != nil {
+		return err
+	}
+
+	httpReq = httpReq.WithContext(ctx)
 
 	return c.do(httpReq, v)
 }

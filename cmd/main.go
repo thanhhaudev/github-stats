@@ -1,14 +1,17 @@
 package main
 
 import (
+	"context"
+	"os"
+
 	_ "github.com/joho/godotenv/autoload"
 	"github.com/thanhhaudev/github-stats/pkg/container"
 	"github.com/thanhhaudev/github-stats/pkg/writer"
-	"os"
 )
 
 func main() {
-	d := container.NewDataContainer()
+	ctx := context.Background()
+	d := container.NewDataContainer(ctx)
 	d.Build()
 
 	err := writer.UpdateReadme(d.GetStats(), os.Getenv("SECTION_NAME"))

@@ -1,6 +1,7 @@
 package wakatime
 
 import (
+	"context"
 	"encoding/base64"
 	"encoding/json"
 	"fmt"
@@ -53,6 +54,24 @@ func (c *Client) get(endpoint string, query url.Values, v interface{}) error {
 	if err != nil {
 		return err
 	}
+
+	return c.do(req, v)
+}
+
+func (c *Client) GetWithContext(ctx context.Context, endpoint string, query url.Values, v interface{}) error {
+	// Check if the context is already canceled
+	select {
+	case <-ctx.Done():
+		return ctx.Err()
+	default:
+	}
+
+	req, err := c.newRequest(http.MethodGet, c.origin+endpoint, query)
+	if err != nil {
+		return err
+	}
+
+	req = req.WithContext(ctx)
 
 	return c.do(req, v)
 }

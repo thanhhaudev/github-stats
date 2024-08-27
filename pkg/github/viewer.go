@@ -1,5 +1,9 @@
 package github
 
+import (
+	"context"
+)
+
 type ViewerService struct {
 	Client *Client
 }
@@ -13,14 +17,14 @@ type Viewer struct {
 }
 
 // Get returns the viewer's information
-func (v *ViewerService) Get(request *Request) (*Viewer, error) {
+func (v *ViewerService) Get(ctx context.Context, request *Request) (*Viewer, error) {
 	var resp struct {
 		Data struct {
 			Viewer *Viewer `json:"viewer"`
 		} `json:"data"`
 	}
 
-	if err := v.Client.Post(request, &resp); err != nil {
+	if err := v.Client.PostWithContext(ctx, request, &resp); err != nil {
 		return nil, err
 	}
 

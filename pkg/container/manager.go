@@ -1,6 +1,8 @@
 package container
 
 import (
+	"context"
+
 	"github.com/thanhhaudev/github-stats/pkg/github"
 	"github.com/thanhhaudev/github-stats/pkg/wakatime"
 )
@@ -11,7 +13,7 @@ type ClientManager struct {
 }
 
 // GetCommits returns the commits of a repository
-func (c *ClientManager) GetCommits(owner, name, authorID, branch string, numCommits int) ([]github.Commit, error) {
+func (c *ClientManager) GetCommits(ctx context.Context, owner, name, authorID, branch string, numCommits int) ([]github.Commit, error) {
 	var allCommits []github.Commit
 	var cursor *string
 
@@ -28,7 +30,7 @@ func (c *ClientManager) GetCommits(owner, name, authorID, branch string, numComm
 			request.Var("afterCursor", *cursor)
 		}
 
-		commits, err := c.GitHubClient.Repositories.Commits(request)
+		commits, err := c.GitHubClient.Repositories.Commits(ctx, request)
 		if err != nil {
 			return nil, err
 		}
@@ -50,7 +52,7 @@ func (c *ClientManager) GetCommits(owner, name, authorID, branch string, numComm
 }
 
 // GetBranches returns the branches of a repository
-func (c *ClientManager) GetBranches(owner, name string, numBranches int) ([]github.Branch, error) {
+func (c *ClientManager) GetBranches(ctx context.Context, owner, name string, numBranches int) ([]github.Branch, error) {
 	var allBranches []github.Branch
 	var cursor *string
 	request := github.NewRequest(github.Queries["repository_branches"])
@@ -63,7 +65,7 @@ func (c *ClientManager) GetBranches(owner, name string, numBranches int) ([]gith
 			request.Var("afterCursor", *cursor)
 		}
 
-		branches, err := c.GitHubClient.Repositories.Branches(request)
+		branches, err := c.GitHubClient.Repositories.Branches(ctx, request)
 		if err != nil {
 			return nil, err
 		}
@@ -85,7 +87,7 @@ func (c *ClientManager) GetBranches(owner, name string, numBranches int) ([]gith
 }
 
 // GetOwnedRepositories returns the repositories owned or collaborated on by the user
-func (c *ClientManager) GetOwnedRepositories(username string, numRepos int) ([]github.Repository, error) {
+func (c *ClientManager) GetOwnedRepositories(ctx context.Context, username string, numRepos int) ([]github.Repository, error) {
 	var allRepos []github.Repository
 	var cursor *string
 
@@ -99,7 +101,7 @@ func (c *ClientManager) GetOwnedRepositories(username string, numRepos int) ([]g
 			request.Var("afterCursor", *cursor)
 		}
 
-		repos, err := c.GitHubClient.Repositories.Owned(request)
+		repos, err := c.GitHubClient.Repositories.Owned(ctx, request)
 		if err != nil {
 			return nil, err
 		}
@@ -121,7 +123,7 @@ func (c *ClientManager) GetOwnedRepositories(username string, numRepos int) ([]g
 }
 
 // GetContributedToRepositories returns the repositories contributed to by the user
-func (c *ClientManager) GetContributedToRepositories(username string, numRepos int) ([]github.Repository, error) {
+func (c *ClientManager) GetContributedToRepositories(ctx context.Context, username string, numRepos int) ([]github.Repository, error) {
 	var allRepos []github.Repository
 	var cursor *string
 
@@ -135,7 +137,7 @@ func (c *ClientManager) GetContributedToRepositories(username string, numRepos i
 			request.Var("afterCursor", *cursor)
 		}
 
-		repos, err := c.GitHubClient.Repositories.ContributedTo(request)
+		repos, err := c.GitHubClient.Repositories.ContributedTo(ctx, request)
 		if err != nil {
 			return nil, err
 		}
@@ -157,9 +159,9 @@ func (c *ClientManager) GetContributedToRepositories(username string, numRepos i
 }
 
 // GetViewer returns the viewer's information
-func (c *ClientManager) GetViewer() (*github.Viewer, error) {
+func (c *ClientManager) GetViewer(ctx context.Context) (*github.Viewer, error) {
 	request := github.NewRequest(github.Queries["viewer"])
-	viewer, err := c.GitHubClient.Viewer.Get(request)
+	viewer, err := c.GitHubClient.Viewer.Get(ctx, request)
 	if err != nil {
 		return nil, err
 	}

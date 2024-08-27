@@ -1,6 +1,9 @@
 package github
 
-import "time"
+import (
+	"context"
+	"time"
+)
 
 type RepositoryService struct {
 	Client *Client
@@ -25,7 +28,7 @@ type Repositories struct {
 }
 
 // ContributedTo returns the repositories contributed to by the user
-func (r *RepositoryService) ContributedTo(request *Request) (*Repositories, error) {
+func (r *RepositoryService) ContributedTo(ctx context.Context, request *Request) (*Repositories, error) {
 	var resp struct {
 		Data struct {
 			User struct {
@@ -34,7 +37,7 @@ func (r *RepositoryService) ContributedTo(request *Request) (*Repositories, erro
 		} `json:"data"`
 	}
 
-	if err := r.Client.Post(request, &resp); err != nil {
+	if err := r.Client.PostWithContext(ctx, request, &resp); err != nil {
 		return nil, err
 	}
 
@@ -42,7 +45,7 @@ func (r *RepositoryService) ContributedTo(request *Request) (*Repositories, erro
 }
 
 // Owned returns the repositories owned by the user
-func (r *RepositoryService) Owned(request *Request) (*Repositories, error) {
+func (r *RepositoryService) Owned(ctx context.Context, request *Request) (*Repositories, error) {
 	var resp struct {
 		Data struct {
 			User struct {
@@ -51,7 +54,7 @@ func (r *RepositoryService) Owned(request *Request) (*Repositories, error) {
 		} `json:"data"`
 	}
 
-	if err := r.Client.Post(request, &resp); err != nil {
+	if err := r.Client.PostWithContext(ctx, request, &resp); err != nil {
 		return nil, err
 	}
 
@@ -71,7 +74,7 @@ type Commits struct {
 }
 
 // Commits returns the commits of a repository
-func (r *RepositoryService) Commits(request *Request) (*Commits, error) {
+func (r *RepositoryService) Commits(ctx context.Context, request *Request) (*Commits, error) {
 	var resp struct {
 		Data struct {
 			Repository struct {
@@ -84,7 +87,7 @@ func (r *RepositoryService) Commits(request *Request) (*Commits, error) {
 		} `json:"data"`
 	}
 
-	if err := r.Client.Post(request, &resp); err != nil {
+	if err := r.Client.PostWithContext(ctx, request, &resp); err != nil {
 		return nil, err
 	}
 
@@ -101,7 +104,7 @@ type Branches struct {
 }
 
 // Branches returns the branches of a repository
-func (r *RepositoryService) Branches(request *Request) (*Branches, error) {
+func (r *RepositoryService) Branches(ctx context.Context, request *Request) (*Branches, error) {
 	var resp struct {
 		Data struct {
 			Repository struct {
@@ -110,7 +113,7 @@ func (r *RepositoryService) Branches(request *Request) (*Branches, error) {
 		} `json:"data"`
 	}
 
-	if err := r.Client.Post(request, &resp); err != nil {
+	if err := r.Client.PostWithContext(ctx, request, &resp); err != nil {
 		return nil, err
 	}
 

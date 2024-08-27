@@ -1,6 +1,7 @@
 package container
 
 import (
+	"context"
 	"fmt"
 	"os"
 	"strings"
@@ -16,6 +17,7 @@ const (
 )
 
 type DataContainer struct {
+	Context       context.Context
 	ClientManager *ClientManager
 	Data          struct {
 		Viewer       *github.Viewer
@@ -53,7 +55,7 @@ func (d *DataContainer) GetStats() string {
 
 // InitViewer initializes the viewer
 func (d *DataContainer) InitViewer() {
-	v, err := d.ClientManager.GetViewer()
+	v, err := d.ClientManager.GetViewer(d.Context)
 	if err != nil {
 		panic(err)
 	}
@@ -64,7 +66,7 @@ func (d *DataContainer) InitViewer() {
 // InitRepositories initializes the repositories
 // owned and contributed to by the user
 func (d *DataContainer) InitRepositories() {
-	r, err := d.ClientManager.GetOwnedRepositories(d.Data.Viewer.Login, repoPerQuery)
+	r, err := d.ClientManager.GetOwnedRepositories(d.Context, d.Data.Viewer.Login, repoPerQuery)
 	if err != nil {
 		panic(err)
 	}
@@ -75,7 +77,7 @@ func (d *DataContainer) InitRepositories() {
 		u[repo.Url] = true
 	}
 
-	c, err := d.ClientManager.GetContributedToRepositories(d.Data.Viewer.Login, repoPerQuery)
+	c, err := d.ClientManager.GetContributedToRepositories(d.Context, d.Data.Viewer.Login, repoPerQuery)
 	if err != nil {
 		panic(err)
 	}
@@ -92,13 +94,13 @@ func (d *DataContainer) InitRepositories() {
 // InitCommits initializes the branches of the repositories
 func (d *DataContainer) InitCommits() {
 	for _, repo := range d.Data.Repositories {
-		b, err := d.ClientManager.GetBranches(repo.Owner.Login, repo.Name, branchPerQuery)
+		b, err := d.ClientManager.GetBranches(d.Context, repo.Owner.Login, repo.Name, branchPerQuery)
 		if err != nil {
 			panic(err)
 		}
 
 		for _, branch := range b {
-			commits, err := d.ClientManager.GetCommits(repo.Owner.Login, repo.Name, d.Data.Viewer.ID, fmt.Sprintf("refs/heads/%s", branch.Name), commitPerQuery)
+			commits, err := d.ClientManager.GetCommits(d.Context, repo.Owner.Login, repo.Name, d.Data.Viewer.ID, fmt.Sprintf("refs/heads/%s", branch.Name), commitPerQuery)
 			if err != nil {
 				panic(err)
 			}
@@ -116,9 +118,9 @@ func (d *DataContainer) Build() {
 }
 
 // NewDataContainer creates a new DataContainer
-func NewDataContainer() *DataContainer {
-	c := NewClientManager(os.Getenv("WAKATIME_API_KEY"), os.Getenv("GITHUB_TOKEN"))
+func NewDataContainer(ctx context.Context) *DataContainer {
 	return &DataContainer{
-		ClientManager: c,
+		ClientManager: NewClientManager(os.Getenv("WAKATIME_API_KEY"), os.Getenv("GITHUB_TOKEN")),
+		Context:       ctx,
 	}
 }
