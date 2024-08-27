@@ -92,7 +92,7 @@ func MakeCommitTimeOfDayList(commits []github.Commit) string {
 
 		data = append(data, Data{
 			Name: period,
-			Description: fmt.Sprintf("%d %s", count, func() string {
+			Description: fmt.Sprintf("%s %s", addCommas(count), func() string {
 				if count > 1 {
 					return "commits"
 				}
@@ -138,7 +138,7 @@ func MakeCommitDaysOfWeekList(wd map[time.Weekday]int, total int) string {
 
 		data = append(data, Data{
 			Name: weekday.String(),
-			Description: fmt.Sprintf("%d %s", wd[weekday], func() string {
+			Description: fmt.Sprintf("%s %s", addCommas(wd[weekday]), func() string {
 				if wd[weekday] > 1 {
 					return "commits"
 				}
@@ -184,7 +184,7 @@ func MakeLanguagePerRepoList(r []github.Repository) string {
 
 		data = append(data, Data{
 			Name: name,
-			Description: fmt.Sprintf("%d %s", num, func() string {
+			Description: fmt.Sprintf("%s %s", addCommas(num), func() string {
 				if num > 1 {
 					return "repos"
 				}
@@ -247,4 +247,16 @@ func truncateString(s string, l int) string {
 	}
 
 	return s
+}
+
+func addCommas(n int) string {
+	str := fmt.Sprintf("%d", n)
+	var result []string
+	for i, c := range str {
+		if (len(str)-i)%3 == 0 && i != 0 {
+			result = append(result, ",")
+		}
+		result = append(result, string(c))
+	}
+	return strings.Join(result, "")
 }
