@@ -6,6 +6,7 @@ import (
 	"os"
 	"strings"
 
+	"github.com/thanhhaudev/github-stats/pkg/clock"
 	"github.com/thanhhaudev/github-stats/pkg/github"
 	"github.com/thanhhaudev/github-stats/pkg/writer"
 )
@@ -26,21 +27,19 @@ type DataContainer struct {
 }
 
 // GetWidgets returns the widgets to display
-func (d *DataContainer) GetWidgets() map[string]string {
-	data := d.CalculateCommits()
-
+func (d *DataContainer) GetWidgets(com *CommitStats) map[string]string {
 	return map[string]string{
 		"LANGUAGE_PER_REPO":   writer.MakeLanguagePerRepoList(d.Data.Repositories),
-		"COMMIT_DAYS_OF_WEEK": writer.MakeCommitDaysOfWeekList(data.DailyCommits, data.TotalCommits),
+		"COMMIT_DAYS_OF_WEEK": writer.MakeCommitDaysOfWeekList(com.DailyCommits, com.TotalCommits),
 		"COMMIT_TIME_OF_DAY":  writer.MakeCommitTimeOfDayList(d.Data.Commits),
 	}
 }
 
 // GetStats returns the statistics
-func (d *DataContainer) GetStats() string {
+func (d *DataContainer) GetStats(cl clock.Clock) string {
 	fmt.Println("Calculating statistics...")
 	b := strings.Builder{}
-	w := d.GetWidgets()
+	w := d.GetWidgets(d.CalculateCommits(cl))
 	for _, k := range strings.Split(os.Getenv("SHOW_WIDGETS"), ",") {
 		v, ok := w[k]
 		if !ok {
@@ -48,6 +47,18 @@ func (d *DataContainer) GetStats() string {
 		}
 
 		b.WriteString(v)
+	}
+
+	// Show last update time if enabled
+	if os.Getenv("SHOW_LAST_UPDATE") == "true" {
+		layout := os.Getenv("TIME_LAYOUT")
+		if layout == "" {
+			layout = clock.DateTimeFormatWithTimezone
+		} else {
+			fmt.Println("Using custom time layout:", layout)
+		}
+
+		b.WriteString(writer.MakeLastUpdatedOn(cl.Now().Format(layout)))
 	}
 
 	fmt.Println("Calculated statistics successfully")

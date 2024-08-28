@@ -3,6 +3,8 @@ package container
 import (
 	"fmt"
 	"time"
+
+	"github.com/thanhhaudev/github-stats/pkg/clock"
 )
 
 // CommitStats stores the calculated commit data
@@ -15,14 +17,14 @@ type CommitStats struct {
 
 // CalculateCommits calculates the number of commits per year and per day of the week
 // return commits per year, commits per day of the week
-func (d *DataContainer) CalculateCommits() *CommitStats {
+func (d *DataContainer) CalculateCommits(cl clock.Clock) *CommitStats {
 	yearlyCommits := make(map[int]int)
 	quarterlyCommits := make(map[string]int, 4)
 	dailyCommits := make(map[time.Weekday]int, 7)
 
 	var totalCommits int
 	for _, commit := range d.Data.Commits {
-		commitDate := commit.CommittedDate
+		commitDate := cl.ToClockTz(commit.CommittedDate)
 		year := commitDate.Year()
 		day := commitDate.Weekday()
 		month := commitDate.Month()

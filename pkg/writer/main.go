@@ -58,6 +58,10 @@ func UpdateReadme(u, n string) error {
 	return os.WriteFile(f, []byte(u), 0644)
 }
 
+func MakeLastUpdatedOn(t string) string {
+	return fmt.Sprintf("\n\n>⏳ Last updated on %s", t)
+}
+
 // MakeCommitTimeOfDayList returns a list of commits made during different times of the day
 func MakeCommitTimeOfDayList(commits []github.Commit) string {
 	timeRanges := map[WeekTime][2]int{
