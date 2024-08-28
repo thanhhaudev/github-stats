@@ -38,6 +38,7 @@ func (d *DataContainer) GetWidgets() map[string]string {
 
 // GetStats returns the statistics
 func (d *DataContainer) GetStats() string {
+	fmt.Println("Calculating statistics...")
 	b := strings.Builder{}
 	w := d.GetWidgets()
 	for _, k := range strings.Split(os.Getenv("SHOW_WIDGETS"), ",") {
@@ -49,11 +50,15 @@ func (d *DataContainer) GetStats() string {
 		b.WriteString(v)
 	}
 
+	fmt.Println("Calculated statistics successfully")
+
 	return b.String()
 }
 
 // InitViewer initializes the viewer
 func (d *DataContainer) InitViewer(ctx context.Context) error {
+	fmt.Println("Fetching viewer information...")
+
 	v, err := d.ClientManager.GetViewer(ctx)
 	if err != nil {
 		return err
@@ -67,6 +72,7 @@ func (d *DataContainer) InitViewer(ctx context.Context) error {
 // InitRepositories initializes the repositories
 // owned and contributed to by the user
 func (d *DataContainer) InitRepositories(ctx context.Context) error {
+	fmt.Println("Fetching repositories...")
 	seenRepos := make(map[string]bool)
 	errChan := make(chan error, 2)
 	repoChan := make(chan []github.Repository, 2)
@@ -80,6 +86,8 @@ func (d *DataContainer) InitRepositories(ctx context.Context) error {
 
 		repoChan <- r
 		errChan <- nil
+
+		fmt.Println("Fetched owned repositories successfully")
 	}()
 
 	go func() {
@@ -91,6 +99,8 @@ func (d *DataContainer) InitRepositories(ctx context.Context) error {
 
 		repoChan <- c
 		errChan <- nil
+
+		fmt.Println("Fetched contributed to repositories successfully")
 	}()
 
 	for i := 0; i < 2; i++ {
@@ -116,6 +126,7 @@ func (d *DataContainer) InitRepositories(ctx context.Context) error {
 
 // InitCommits initializes the branches of the repositories
 func (d *DataContainer) InitCommits(ctx context.Context) error {
+	fmt.Println("Fetching commits...")
 	fetchAllBranches := os.Getenv("ONLY_MAIN_BRANCH") != "true"
 	repoCount := len(d.Data.Repositories)
 	errChan := make(chan error, repoCount)
@@ -124,7 +135,8 @@ func (d *DataContainer) InitCommits(ctx context.Context) error {
 
 	for _, repo := range d.Data.Repositories {
 		go func(repo github.Repository) {
-			if fetchAllBranches { // Fetch commits from all branches
+			if fetchAllBranches {
+				fmt.Println("Fetching commits from all branches of repository:", repo.Name)
 				branches, err := d.ClientManager.GetBranches(ctx, repo.Owner.Login, repo.Name, branchPerQuery)
 				if err != nil {
 					errChan <- err
@@ -143,7 +155,8 @@ func (d *DataContainer) InitCommits(ctx context.Context) error {
 				}
 
 				commitChan <- allCommits
-			} else { // Fetch commits from the default branch
+			} else {
+				fmt.Println("Fetching commits from the default branch of repository:", repo.Name)
 				defaultBranch, err := d.ClientManager.GetDefaultBranch(ctx, repo.Owner.Login, repo.Name)
 				if err != nil {
 					errChan <- err
@@ -158,6 +171,7 @@ func (d *DataContainer) InitCommits(ctx context.Context) error {
 
 				commitChan <- commits
 			}
+
 			errChan <- nil
 		}(repo)
 	}
@@ -179,6 +193,8 @@ func (d *DataContainer) InitCommits(ctx context.Context) error {
 			}
 		}
 	}
+
+	fmt.Println("Fetched commits successfully")
 
 	return nil
 }
