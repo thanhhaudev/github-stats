@@ -17,7 +17,6 @@ const (
 )
 
 type DataContainer struct {
-	Context       context.Context
 	ClientManager *ClientManager
 	Data          struct {
 		Viewer       *github.Viewer
@@ -54,8 +53,8 @@ func (d *DataContainer) GetStats() string {
 }
 
 // InitViewer initializes the viewer
-func (d *DataContainer) InitViewer() error {
-	v, err := d.ClientManager.GetViewer(d.Context)
+func (d *DataContainer) InitViewer(ctx context.Context) error {
+	v, err := d.ClientManager.GetViewer(ctx)
 	if err != nil {
 		return err
 	}
@@ -67,13 +66,13 @@ func (d *DataContainer) InitViewer() error {
 
 // InitRepositories initializes the repositories
 // owned and contributed to by the user
-func (d *DataContainer) InitRepositories() error {
+func (d *DataContainer) InitRepositories(ctx context.Context) error {
 	seenRepos := make(map[string]bool)
 	errChan := make(chan error, 2)
 	repoChan := make(chan []github.Repository, 2)
 
 	go func() {
-		r, err := d.ClientManager.GetOwnedRepositories(d.Context, d.Data.Viewer.Login, repoPerQuery)
+		r, err := d.ClientManager.GetOwnedRepositories(ctx, d.Data.Viewer.Login, repoPerQuery)
 		if err != nil {
 			errChan <- err
 			return
@@ -84,7 +83,7 @@ func (d *DataContainer) InitRepositories() error {
 	}()
 
 	go func() {
-		c, err := d.ClientManager.GetContributedToRepositories(d.Context, d.Data.Viewer.Login, repoPerQuery)
+		c, err := d.ClientManager.GetContributedToRepositories(ctx, d.Data.Viewer.Login, repoPerQuery)
 		if err != nil {
 			errChan <- err
 			return
@@ -116,7 +115,7 @@ func (d *DataContainer) InitRepositories() error {
 }
 
 // InitCommits initializes the branches of the repositories
-func (d *DataContainer) InitCommits() error {
+func (d *DataContainer) InitCommits(ctx context.Context) error {
 	fetchAllBranches := os.Getenv("ONLY_MAIN_BRANCH") != "true"
 	repoCount := len(d.Data.Repositories)
 	errChan := make(chan error, repoCount)
@@ -126,7 +125,7 @@ func (d *DataContainer) InitCommits() error {
 	for _, repo := range d.Data.Repositories {
 		go func(repo github.Repository) {
 			if fetchAllBranches { // Fetch commits from all branches
-				branches, err := d.ClientManager.GetBranches(d.Context, repo.Owner.Login, repo.Name, branchPerQuery)
+				branches, err := d.ClientManager.GetBranches(ctx, repo.Owner.Login, repo.Name, branchPerQuery)
 				if err != nil {
 					errChan <- err
 					return
@@ -134,7 +133,7 @@ func (d *DataContainer) InitCommits() error {
 
 				var allCommits []github.Commit
 				for _, branch := range branches {
-					commits, err := d.ClientManager.GetCommits(d.Context, repo.Owner.Login, repo.Name, d.Data.Viewer.ID, fmt.Sprintf("refs/heads/%s", branch.Name), commitPerQuery)
+					commits, err := d.ClientManager.GetCommits(ctx, repo.Owner.Login, repo.Name, d.Data.Viewer.ID, fmt.Sprintf("refs/heads/%s", branch.Name), commitPerQuery)
 					if err != nil {
 						errChan <- err
 						return
@@ -145,13 +144,13 @@ func (d *DataContainer) InitCommits() error {
 
 				commitChan <- allCommits
 			} else { // Fetch commits from the default branch
-				defaultBranch, err := d.ClientManager.GetDefaultBranch(d.Context, repo.Owner.Login, repo.Name)
+				defaultBranch, err := d.ClientManager.GetDefaultBranch(ctx, repo.Owner.Login, repo.Name)
 				if err != nil {
 					errChan <- err
 					return
 				}
 
-				commits, err := d.ClientManager.GetCommits(d.Context, repo.Owner.Login, repo.Name, d.Data.Viewer.ID, fmt.Sprintf("refs/heads/%s", defaultBranch.Name), commitPerQuery)
+				commits, err := d.ClientManager.GetCommits(ctx, repo.Owner.Login, repo.Name, d.Data.Viewer.ID, fmt.Sprintf("refs/heads/%s", defaultBranch.Name), commitPerQuery)
 				if err != nil {
 					errChan <- err
 					return
@@ -185,18 +184,18 @@ func (d *DataContainer) InitCommits() error {
 }
 
 // Build builds the data container
-func (d *DataContainer) Build() error {
-	err := d.InitViewer()
+func (d *DataContainer) Build(ctx context.Context) error {
+	err := d.InitViewer(ctx)
 	if err != nil {
 		return err
 	}
 
-	err = d.InitRepositories()
+	err = d.InitRepositories(ctx)
 	if err != nil {
 		return err
 	}
 
-	err = d.InitCommits()
+	err = d.InitCommits(ctx)
 	if err != nil {
 		return err
 	}
@@ -205,9 +204,8 @@ func (d *DataContainer) Build() error {
 }
 
 // NewDataContainer creates a new DataContainer
-func NewDataContainer(ctx context.Context) *DataContainer {
+func NewDataContainer() *DataContainer {
 	return &DataContainer{
 		ClientManager: NewClientManager(os.Getenv("WAKATIME_API_KEY"), os.Getenv("GITHUB_TOKEN")),
-		Context:       ctx,
 	}
 }

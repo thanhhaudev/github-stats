@@ -14,9 +14,11 @@ import (
 func main() {
 	start := time.Now()
 
-	ctx := context.Background()
-	d := container.NewDataContainer(ctx)
-	err := d.Build()
+	ctx, cancel := context.WithCancel(context.Background())
+	defer cancel()
+
+	d := container.NewDataContainer()
+	err := d.Build(ctx)
 	if err != nil {
 		panic(err)
 	}
