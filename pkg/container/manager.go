@@ -183,9 +183,6 @@ func (c *ClientManager) GetDefaultBranch(ctx context.Context, owner, name string
 }
 
 // NewClientManager creates a new ClientManager
-func NewClientManager(wakaTimeApiKey, gitHubApiKey string) *ClientManager {
-	return &ClientManager{
-		WakaTimeClient: wakatime.NewWakaTime(wakaTimeApiKey),
-		GitHubClient:   github.NewGitHub(gitHubApiKey),
-	}
+func NewClientManager(w *wakatime.WakaTime, g *github.GitHub) *ClientManager {
+	return &ClientManager{w, g}
 }

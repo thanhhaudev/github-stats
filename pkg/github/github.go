@@ -131,6 +131,10 @@ type PageInfo struct {
 
 // NewGitHub creates a new GitHub
 func NewGitHub(token string) *GitHub {
+	if token == "" {
+		return nil
+	}
+
 	client := NewClient(token)
 
 	return &GitHub{

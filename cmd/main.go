@@ -3,18 +3,20 @@ package main
 import (
 	"context"
 	"fmt"
+	"log"
 	"os"
 	"time"
 
 	_ "github.com/joho/godotenv/autoload"
 	"github.com/thanhhaudev/github-stats/pkg/clock"
 	"github.com/thanhhaudev/github-stats/pkg/container"
+	"github.com/thanhhaudev/github-stats/pkg/github"
+	"github.com/thanhhaudev/github-stats/pkg/wakatime"
 	"github.com/thanhhaudev/github-stats/pkg/writer"
 )
 
 func main() {
 	start := time.Now()
-
 	ctx, cancel := context.WithCancel(context.Background())
 	defer cancel()
 
@@ -25,12 +27,16 @@ func main() {
 			panic(err)
 		}
 
-		fmt.Printf("Timezone set to %s\n", tz)
+		fmt.Printf("🕙 Timezone set to %s\n", tz)
 	}
 
-	d := container.NewDataContainer()
-	if err := d.Build(ctx); err != nil {
-		panic(err)
+	gc := github.NewGitHub(os.Getenv("GITHUB_TOKEN"))
+	wc := wakatime.NewWakaTime(os.Getenv("WAKATIME_API_KEY"))
+	dc := container.NewDataContainer(container.NewClientManager(wc, gc))
+	if gc != nil {
+		if err := dc.BuildGitHubData(ctx); err != nil {
+			log.Fatalln(err)
+		}
 	}
 
 	sectionName := os.Getenv("SECTION_NAME")
@@ -38,10 +44,10 @@ func main() {
 		sectionName = "readme-stats"
 	}
 
-	err := writer.UpdateReadme(d.GetStats(cl), sectionName)
+	err := writer.UpdateReadme(dc.GetStats(cl), sectionName)
 	if err != nil {
 		panic(err)
 	}
 
-	fmt.Printf("Execution Duration: %s\n", time.Since(start))
+	fmt.Printf("🚀 Execution Duration: %s\n", time.Since(start))
 }

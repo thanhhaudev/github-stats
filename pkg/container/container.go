@@ -26,8 +26,8 @@ type DataContainer struct {
 	}
 }
 
-// GetWidgets returns the widgets to display
-func (d *DataContainer) GetWidgets(com *CommitStats) map[string]string {
+// GetGithubWidgets returns the widgets to display
+func (d *DataContainer) GetGithubWidgets(com *CommitStats) map[string]string {
 	return map[string]string{
 		"LANGUAGE_PER_REPO":   writer.MakeLanguagePerRepoList(d.Data.Repositories),
 		"COMMIT_DAYS_OF_WEEK": writer.MakeCommitDaysOfWeekList(com.DailyCommits, com.TotalCommits),
@@ -39,8 +39,24 @@ func (d *DataContainer) GetWidgets(com *CommitStats) map[string]string {
 func (d *DataContainer) GetStats(cl clock.Clock) string {
 	fmt.Println("Calculating statistics...")
 	b := strings.Builder{}
-	w := d.GetWidgets(d.CalculateCommits(cl))
-	for _, k := range strings.Split(os.Getenv("SHOW_WIDGETS"), ",") {
+
+	// show GitHub widgets if enabled
+	if d.ClientManager.GitHubClient != nil {
+		fmt.Println("Creating GitHub widgets...")
+		w := d.GetGithubWidgets(d.CalculateCommits(cl))
+		showGitHubWidgets(w, &b)
+	}
+
+	// Show last update time if enabled
+	showLastUpdated(cl, &b)
+
+	fmt.Println("Calculated statistics successfully")
+
+	return b.String()
+}
+
+func showGitHubWidgets(w map[string]string, b *strings.Builder) {
+	for _, k := range strings.Split(os.Getenv("GITHUB_WIDGETS"), ",") {
 		v, ok := w[k]
 		if !ok {
 			continue
@@ -48,8 +64,9 @@ func (d *DataContainer) GetStats(cl clock.Clock) string {
 
 		b.WriteString(v)
 	}
+}
 
-	// Show last update time if enabled
+func showLastUpdated(cl clock.Clock, b *strings.Builder) {
 	if os.Getenv("SHOW_LAST_UPDATE") == "true" {
 		layout := os.Getenv("TIME_LAYOUT")
 		if layout == "" {
@@ -60,10 +77,6 @@ func (d *DataContainer) GetStats(cl clock.Clock) string {
 
 		b.WriteString(writer.MakeLastUpdatedOn(cl.Now().Format(layout)))
 	}
-
-	fmt.Println("Calculated statistics successfully")
-
-	return b.String()
 }
 
 // InitViewer initializes the viewer
@@ -210,8 +223,8 @@ func (d *DataContainer) InitCommits(ctx context.Context) error {
 	return nil
 }
 
-// Build builds the data container
-func (d *DataContainer) Build(ctx context.Context) error {
+// BuildGitHubData builds the data container
+func (d *DataContainer) BuildGitHubData(ctx context.Context) error {
 	err := d.InitViewer(ctx)
 	if err != nil {
 		return err
@@ -231,8 +244,8 @@ func (d *DataContainer) Build(ctx context.Context) error {
 }
 
 // NewDataContainer creates a new DataContainer
-func NewDataContainer() *DataContainer {
+func NewDataContainer(cm *ClientManager) *DataContainer {
 	return &DataContainer{
-		ClientManager: NewClientManager(os.Getenv("WAKATIME_API_KEY"), os.Getenv("GITHUB_TOKEN")),
+		ClientManager: cm,
 	}
 }
