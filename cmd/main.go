@@ -33,7 +33,12 @@ func main() {
 		panic(err)
 	}
 
-	err := writer.UpdateReadme(d.GetStats(cl), os.Getenv("SECTION_NAME"))
+	sectionName := os.Getenv("SECTION_NAME")
+	if sectionName == "" {
+		sectionName = "readme-stats"
+	}
+
+	err := writer.UpdateReadme(d.GetStats(cl), sectionName)
 	if err != nil {
 		panic(err)
 	}

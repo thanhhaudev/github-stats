@@ -50,7 +50,7 @@ func UpdateReadme(u, n string) error {
 	ei := strings.Index(string(b), e)
 
 	if si == -1 || ei == -1 {
-		return fmt.Errorf("section tags not found in README.md")
+		return fmt.Errorf("section tags %s or %s not found in %s", s, e, f)
 	}
 
 	u = string(b)[:si+len(s)] + "\n" + u + "\n" + string(b)[ei:]
