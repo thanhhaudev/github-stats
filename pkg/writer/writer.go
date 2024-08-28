@@ -64,6 +64,10 @@ func MakeLastUpdatedOn(t string) string {
 
 // MakeCommitTimeOfDayList returns a list of commits made during different times of the day
 func MakeCommitTimeOfDayList(commits []github.Commit) string {
+	if len(commits) == 0 {
+		return ""
+	}
+
 	timeRanges := map[WeekTime][2]int{
 		Morning: {6, 12},
 		Daytime: {12, 18},
@@ -113,6 +117,10 @@ func MakeCommitTimeOfDayList(commits []github.Commit) string {
 
 // MakeCommitDaysOfWeekList returns a list of commits made on each day of the week
 func MakeCommitDaysOfWeekList(wd map[time.Weekday]int, total int) string {
+	if total == 0 {
+		return ""
+	}
+
 	var (
 		topName string
 		topVal  int
@@ -153,6 +161,10 @@ func MakeCommitDaysOfWeekList(wd map[time.Weekday]int, total int) string {
 
 // MakeLanguagePerRepoList returns a list of languages and the percentage of repositories that use them
 func MakeLanguagePerRepoList(r []github.Repository) string {
+	if len(r) == 0 {
+		return ""
+	}
+
 	var (
 		count   float64
 		topName string

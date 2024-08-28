@@ -2,7 +2,6 @@ package main
 
 import (
 	"context"
-	"fmt"
 	"log"
 	"os"
 	"time"
@@ -16,27 +15,18 @@ import (
 )
 
 func main() {
+	logger := log.New(os.Stdout, "", log.Lmsgprefix)
+	logger.Println("🚀 Starting...")
 	start := time.Now()
 	ctx, cancel := context.WithCancel(context.Background())
 	defer cancel()
 
-	cl := clock.NewClock()
-	if tz := os.Getenv("TIME_ZONE"); tz != "" {
-		err := cl.SetLocation(tz)
-		if err != nil {
-			panic(err)
-		}
-
-		fmt.Printf("🕙 Timezone set to %s\n", tz)
-	}
-
 	gc := github.NewGitHub(os.Getenv("GITHUB_TOKEN"))
 	wc := wakatime.NewWakaTime(os.Getenv("WAKATIME_API_KEY"))
-	dc := container.NewDataContainer(container.NewClientManager(wc, gc))
-	if gc != nil {
-		if err := dc.BuildGitHubData(ctx); err != nil {
-			log.Fatalln(err)
-		}
+	dc := container.NewDataContainer(logger, container.NewClientManager(wc, gc))
+
+	if err := dc.Build(ctx); err != nil {
+		logger.Fatalln(err)
 	}
 
 	sectionName := os.Getenv("SECTION_NAME")
@@ -44,10 +34,31 @@ func main() {
 		sectionName = "readme-stats"
 	}
 
-	err := writer.UpdateReadme(dc.GetStats(cl), sectionName)
+	cl, err := setClock(logger)
 	if err != nil {
 		panic(err)
 	}
 
-	fmt.Printf("🚀 Execution Duration: %s\n", time.Since(start))
+	err = writer.UpdateReadme(dc.GetStats(cl), sectionName)
+	if err != nil {
+		panic(err)
+	}
+
+	logger.Printf("🚩 Execution Duration: %s\n", time.Since(start))
+}
+
+func setClock(logger *log.Logger) (clock.Clock, error) {
+	cl := clock.NewClock()
+	if tz := os.Getenv("TIME_ZONE"); tz != "" {
+		err := cl.SetLocation(tz)
+		if err != nil {
+			logger.Printf("⚠️ Invalid timezone %s: %v\n", tz, err)
+
+			return nil, err
+		}
+
+		logger.Printf("🕙 Timezone set to %s\n", tz)
+	}
+
+	return cl, nil
 }

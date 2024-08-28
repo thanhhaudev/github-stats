@@ -3,6 +3,7 @@ package container
 import (
 	"context"
 	"fmt"
+	"log"
 	"os"
 	"strings"
 
@@ -19,6 +20,7 @@ const (
 
 type DataContainer struct {
 	ClientManager *ClientManager
+	Logger        *log.Logger
 	Data          struct {
 		Viewer       *github.Viewer
 		Repositories []github.Repository
@@ -32,31 +34,29 @@ func (d *DataContainer) GetGithubWidgets(com *CommitStats) map[string]string {
 		"LANGUAGE_PER_REPO":   writer.MakeLanguagePerRepoList(d.Data.Repositories),
 		"COMMIT_DAYS_OF_WEEK": writer.MakeCommitDaysOfWeekList(com.DailyCommits, com.TotalCommits),
 		"COMMIT_TIME_OF_DAY":  writer.MakeCommitTimeOfDayList(d.Data.Commits),
+		"WAKATIME_SPENT_TIME": "",
 	}
 }
 
 // GetStats returns the statistics
 func (d *DataContainer) GetStats(cl clock.Clock) string {
-	fmt.Println("Calculating statistics...")
+	d.Logger.Println("Creating statistics...")
 	b := strings.Builder{}
 
-	// show GitHub widgets if enabled
-	if d.ClientManager.GitHubClient != nil {
-		fmt.Println("Creating GitHub widgets...")
-		w := d.GetGithubWidgets(d.CalculateCommits(cl))
-		showGitHubWidgets(w, &b)
-	}
+	// widgets
+	w := d.GetGithubWidgets(d.CalculateCommits(cl))
+	showWidgets(w, &b)
 
 	// Show last update time if enabled
 	showLastUpdated(cl, &b)
 
-	fmt.Println("Calculated statistics successfully")
+	d.Logger.Println("Created statistics successfully")
 
 	return b.String()
 }
 
-func showGitHubWidgets(w map[string]string, b *strings.Builder) {
-	for _, k := range strings.Split(os.Getenv("GITHUB_WIDGETS"), ",") {
+func showWidgets(w map[string]string, b *strings.Builder) {
+	for _, k := range strings.Split(os.Getenv("SHOW_WIDGETS"), ",") {
 		v, ok := w[k]
 		if !ok {
 			continue
@@ -71,8 +71,6 @@ func showLastUpdated(cl clock.Clock, b *strings.Builder) {
 		layout := os.Getenv("TIME_LAYOUT")
 		if layout == "" {
 			layout = clock.DateTimeFormatWithTimezone
-		} else {
-			fmt.Println("Using custom time layout:", layout)
 		}
 
 		b.WriteString(writer.MakeLastUpdatedOn(cl.Now().Format(layout)))
@@ -81,7 +79,7 @@ func showLastUpdated(cl clock.Clock, b *strings.Builder) {
 
 // InitViewer initializes the viewer
 func (d *DataContainer) InitViewer(ctx context.Context) error {
-	fmt.Println("Fetching viewer information...")
+	d.Logger.Println("Fetching viewer information...")
 
 	v, err := d.ClientManager.GetViewer(ctx)
 	if err != nil {
@@ -96,7 +94,7 @@ func (d *DataContainer) InitViewer(ctx context.Context) error {
 // InitRepositories initializes the repositories
 // owned and contributed to by the user
 func (d *DataContainer) InitRepositories(ctx context.Context) error {
-	fmt.Println("Fetching repositories...")
+	d.Logger.Println("Fetching repositories...")
 	seenRepos := make(map[string]bool)
 	errChan := make(chan error, 2)
 	repoChan := make(chan []github.Repository, 2)
@@ -111,7 +109,7 @@ func (d *DataContainer) InitRepositories(ctx context.Context) error {
 		repoChan <- r
 		errChan <- nil
 
-		fmt.Println("Fetched owned repositories successfully")
+		d.Logger.Println("Fetched owned repositories successfully")
 	}()
 
 	go func() {
@@ -124,7 +122,7 @@ func (d *DataContainer) InitRepositories(ctx context.Context) error {
 		repoChan <- c
 		errChan <- nil
 
-		fmt.Println("Fetched contributed to repositories successfully")
+		d.Logger.Println("Fetched contributed to repositories successfully")
 	}()
 
 	for i := 0; i < 2; i++ {
@@ -150,7 +148,7 @@ func (d *DataContainer) InitRepositories(ctx context.Context) error {
 
 // InitCommits initializes the branches of the repositories
 func (d *DataContainer) InitCommits(ctx context.Context) error {
-	fmt.Println("Fetching commits...")
+	d.Logger.Println("Fetching commits...")
 	fetchAllBranches := os.Getenv("ONLY_MAIN_BRANCH") != "true"
 	repoCount := len(d.Data.Repositories)
 	errChan := make(chan error, repoCount)
@@ -160,7 +158,7 @@ func (d *DataContainer) InitCommits(ctx context.Context) error {
 	for _, repo := range d.Data.Repositories {
 		go func(repo github.Repository) {
 			if fetchAllBranches {
-				fmt.Println("Fetching commits from all branches of repository:", repo.Name)
+				d.Logger.Println("Fetching commits from all branches of repository:", repo.Name)
 				branches, err := d.ClientManager.GetBranches(ctx, repo.Owner.Login, repo.Name, branchPerQuery)
 				if err != nil {
 					errChan <- err
@@ -180,7 +178,7 @@ func (d *DataContainer) InitCommits(ctx context.Context) error {
 
 				commitChan <- allCommits
 			} else {
-				fmt.Println("Fetching commits from the default branch of repository:", repo.Name)
+				d.Logger.Println("Fetching commits from the default branch of repository:", repo.Name)
 				defaultBranch, err := d.ClientManager.GetDefaultBranch(ctx, repo.Owner.Login, repo.Name)
 				if err != nil {
 					errChan <- err
@@ -218,34 +216,45 @@ func (d *DataContainer) InitCommits(ctx context.Context) error {
 		}
 	}
 
-	fmt.Println("Fetched commits successfully")
+	d.Logger.Println("Fetched commits successfully")
 
 	return nil
 }
 
-// BuildGitHubData builds the data container
-func (d *DataContainer) BuildGitHubData(ctx context.Context) error {
-	err := d.InitViewer(ctx)
-	if err != nil {
-		return err
+// Build builds the data container
+func (d *DataContainer) Build(ctx context.Context) error {
+	d.Logger.Println("Building data container...")
+
+	// if the GitHub client is not nil, initialize the viewer, repositories, and commits
+	if d.ClientManager.GitHubClient != nil {
+		d.Logger.Println("Fetching data from GitHub APIs...")
+		err := d.InitViewer(ctx)
+		if err != nil {
+			return err
+		}
+
+		err = d.InitRepositories(ctx)
+		if err != nil {
+			return err
+		}
+
+		err = d.InitCommits(ctx)
+		if err != nil {
+			return err
+		}
+
+		d.Logger.Println("Fetching data from GitHub APIs successfully")
 	}
 
-	err = d.InitRepositories(ctx)
-	if err != nil {
-		return err
-	}
-
-	err = d.InitCommits(ctx)
-	if err != nil {
-		return err
-	}
+	d.Logger.Println("Built data container successfully")
 
 	return nil
 }
 
 // NewDataContainer creates a new DataContainer
-func NewDataContainer(cm *ClientManager) *DataContainer {
+func NewDataContainer(l *log.Logger, cm *ClientManager) *DataContainer {
 	return &DataContainer{
+		Logger:        l,
 		ClientManager: cm,
 	}
 }
