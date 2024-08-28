@@ -54,67 +54,154 @@ func (d *DataContainer) GetStats() string {
 }
 
 // InitViewer initializes the viewer
-func (d *DataContainer) InitViewer() {
+func (d *DataContainer) InitViewer() error {
 	v, err := d.ClientManager.GetViewer(d.Context)
 	if err != nil {
-		panic(err)
+		return err
 	}
 
 	d.Data.Viewer = v
+
+	return nil
 }
 
 // InitRepositories initializes the repositories
 // owned and contributed to by the user
-func (d *DataContainer) InitRepositories() {
-	r, err := d.ClientManager.GetOwnedRepositories(d.Context, d.Data.Viewer.Login, repoPerQuery)
-	if err != nil {
-		panic(err)
-	}
+func (d *DataContainer) InitRepositories() error {
+	seenRepos := make(map[string]bool)
+	errChan := make(chan error, 2)
+	repoChan := make(chan []github.Repository, 2)
 
-	// Get the unique URLs of the repositories
-	u := make(map[string]bool)
-	for _, repo := range r {
-		u[repo.Url] = true
-	}
+	go func() {
+		r, err := d.ClientManager.GetOwnedRepositories(d.Context, d.Data.Viewer.Login, repoPerQuery)
+		if err != nil {
+			errChan <- err
+			return
+		}
 
-	c, err := d.ClientManager.GetContributedToRepositories(d.Context, d.Data.Viewer.Login, repoPerQuery)
-	if err != nil {
-		panic(err)
-	}
+		repoChan <- r
+		errChan <- nil
+	}()
 
-	for _, repo := range c {
-		if _, ok := u[repo.Url]; !ok { // Only add the repository if it is not already in the list
-			r = append(r, repo)
+	go func() {
+		c, err := d.ClientManager.GetContributedToRepositories(d.Context, d.Data.Viewer.Login, repoPerQuery)
+		if err != nil {
+			errChan <- err
+			return
+		}
+
+		repoChan <- c
+		errChan <- nil
+	}()
+
+	for i := 0; i < 2; i++ {
+		if err := <-errChan; err != nil {
+			return err
 		}
 	}
 
-	d.Data.Repositories = r
+	close(repoChan) // Close the channel to signal that all repositories have been fetched
+
+	// Deduplicate repositories
+	for repos := range repoChan {
+		for _, repo := range repos {
+			if !seenRepos[repo.Url] {
+				seenRepos[repo.Url] = true
+				d.Data.Repositories = append(d.Data.Repositories, repo)
+			}
+		}
+	}
+
+	return nil
 }
 
 // InitCommits initializes the branches of the repositories
-func (d *DataContainer) InitCommits() {
+func (d *DataContainer) InitCommits() error {
+	fetchAllBranches := os.Getenv("ONLY_MAIN_BRANCH") != "true"
+	repoCount := len(d.Data.Repositories)
+	errChan := make(chan error, repoCount)
+	commitChan := make(chan []github.Commit, repoCount)
+	seenOIDs := make(map[string]bool)
+
 	for _, repo := range d.Data.Repositories {
-		b, err := d.ClientManager.GetBranches(d.Context, repo.Owner.Login, repo.Name, branchPerQuery)
-		if err != nil {
-			panic(err)
-		}
+		go func(repo github.Repository) {
+			if fetchAllBranches { // Fetch commits from all branches
+				branches, err := d.ClientManager.GetBranches(d.Context, repo.Owner.Login, repo.Name, branchPerQuery)
+				if err != nil {
+					errChan <- err
+					return
+				}
 
-		for _, branch := range b {
-			commits, err := d.ClientManager.GetCommits(d.Context, repo.Owner.Login, repo.Name, d.Data.Viewer.ID, fmt.Sprintf("refs/heads/%s", branch.Name), commitPerQuery)
-			if err != nil {
-				panic(err)
+				var allCommits []github.Commit
+				for _, branch := range branches {
+					commits, err := d.ClientManager.GetCommits(d.Context, repo.Owner.Login, repo.Name, d.Data.Viewer.ID, fmt.Sprintf("refs/heads/%s", branch.Name), commitPerQuery)
+					if err != nil {
+						errChan <- err
+						return
+					}
+
+					allCommits = append(allCommits, commits...)
+				}
+
+				commitChan <- allCommits
+			} else { // Fetch commits from the default branch
+				defaultBranch, err := d.ClientManager.GetDefaultBranch(d.Context, repo.Owner.Login, repo.Name)
+				if err != nil {
+					errChan <- err
+					return
+				}
+
+				commits, err := d.ClientManager.GetCommits(d.Context, repo.Owner.Login, repo.Name, d.Data.Viewer.ID, fmt.Sprintf("refs/heads/%s", defaultBranch.Name), commitPerQuery)
+				if err != nil {
+					errChan <- err
+					return
+				}
+
+				commitChan <- commits
 			}
+			errChan <- nil
+		}(repo)
+	}
 
-			d.Data.Commits = append(d.Data.Commits, commits...)
+	for i := 0; i < len(d.Data.Repositories); i++ {
+		if err := <-errChan; err != nil {
+			return err
 		}
 	}
+
+	close(commitChan) // Close the channel to signal that all commits have been fetched
+
+	// Deduplicate commits
+	for commits := range commitChan {
+		for _, commit := range commits {
+			if !seenOIDs[commit.OID] {
+				seenOIDs[commit.OID] = true
+				d.Data.Commits = append(d.Data.Commits, commit)
+			}
+		}
+	}
+
+	return nil
 }
 
 // Build builds the data container
-func (d *DataContainer) Build() {
-	d.InitViewer()
-	d.InitRepositories()
-	d.InitCommits()
+func (d *DataContainer) Build() error {
+	err := d.InitViewer()
+	if err != nil {
+		return err
+	}
+
+	err = d.InitRepositories()
+	if err != nil {
+		return err
+	}
+
+	err = d.InitCommits()
+	if err != nil {
+		return err
+	}
+
+	return nil
 }
 
 // NewDataContainer creates a new DataContainer

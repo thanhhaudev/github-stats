@@ -22,6 +22,19 @@ type Data struct {
 	Percent     float64
 }
 
+const (
+	Morning WeekTime = iota
+	Daytime
+	Evening
+	Night
+)
+
+type WeekTime int
+
+func (w WeekTime) String() string {
+	return longWeekTimeNames[w]
+}
+
 // UpdateReadme updates the README.md file with the provided stats
 func UpdateReadme(u, n string) error {
 	f := "README.md"
@@ -47,21 +60,15 @@ func UpdateReadme(u, n string) error {
 
 // MakeCommitTimeOfDayList returns a list of commits made during different times of the day
 func MakeCommitTimeOfDayList(commits []github.Commit) string {
-	timeRanges := map[string][2]int{
-		"Morning": {6, 12},
-		"Daytime": {12, 18},
-		"Evening": {18, 24},
-		"Night":   {0, 6},
-	}
-
-	counts := map[string]int{
-		"Morning": 0,
-		"Daytime": 0,
-		"Evening": 0,
-		"Night":   0,
+	timeRanges := map[WeekTime][2]int{
+		Morning: {6, 12},
+		Daytime: {12, 18},
+		Evening: {18, 24},
+		Night:   {0, 6},
 	}
 
 	total := len(commits)
+	counts := make(map[WeekTime]int)
 
 	for _, commit := range commits {
 		hour := commit.CommittedDate.Hour()
@@ -74,42 +81,30 @@ func MakeCommitTimeOfDayList(commits []github.Commit) string {
 	}
 
 	var data []Data
-	var topName string
+	var topWeek WeekTime
 	var topVal int
-	var longTimeNames = []string{
-		"Morning",
-		"Daytime",
-		"Evening",
-		"Night",
-	}
 
-	for _, period := range longTimeNames {
-		count := counts[period]
-		if count > topVal {
-			topVal = count
-			topName = period
+	for i, n := range longWeekTimeNames {
+		weekTime := WeekTime(i)
+		weekCommit := counts[WeekTime(i)]
+		if weekCommit > topVal {
+			topVal = weekCommit
+			topWeek = weekTime
 		}
 
 		data = append(data, Data{
-			Name: period,
-			Description: fmt.Sprintf("%s %s", addCommas(count), func() string {
-				if count > 1 {
+			Name: fmt.Sprintf("%s %s", weekTimeEmoji[weekTime], n),
+			Description: fmt.Sprintf("%s %s", addCommas(weekCommit), func() string {
+				if weekCommit > 1 {
 					return "commits"
 				}
 				return "commit"
 			}()),
-			Percent: float64(count) / float64(total) * 100,
+			Percent: float64(weekCommit) / float64(total) * 100,
 		})
 	}
 
-	topNames := map[string]string{
-		"Morning": "An Early Bird 🐣",
-		"Daytime": "An Afternoon Warrior 🥷🏻",
-		"Evening": "A Twilight Taskmaster 🌆",
-		"Night":   "A Night Owl 🦉",
-	}
-
-	return fmt.Sprintf("**🕒 I'm %s**\n\n", topNames[topName]) + "```text" + makeList(data...) + "```\n\n"
+	return fmt.Sprintf("**🕒 I'm %s**\n\n", weekTimeStatuses[topWeek]) + "```text" + makeList(data...) + "```\n\n"
 }
 
 // MakeCommitDaysOfWeekList returns a list of commits made on each day of the week
@@ -191,7 +186,7 @@ func MakeLanguagePerRepoList(r []github.Repository) string {
 
 				return "repo"
 			}()),
-			Percent: float64(repos[name]) / count * 100,
+			Percent: float64(num) / count * 100,
 		})
 	}
 
@@ -258,5 +253,6 @@ func addCommas(n int) string {
 		}
 		result = append(result, string(c))
 	}
+
 	return strings.Join(result, "")
 }

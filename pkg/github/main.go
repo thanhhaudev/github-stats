@@ -5,7 +5,7 @@ var Queries = map[string]string{
 	// $username: the username of the user
 	// $numRepos: the number of repositories to return
 	// $afterCursor: the cursor to start from
-	"repositoriesContributedTo": `query ($username: String!, $numRepos: Int!, $afterCursor: String) {
+	"repositories_contributed_to": `query ($username: String!, $numRepos: Int!, $afterCursor: String) {
 	  user(login: $username) {
 		repositoriesContributedTo(first: $numRepos, after: $afterCursor, orderBy: {field: CREATED_AT, direction: DESC}, includeUserRepositories: true) {
 		  nodes {
@@ -60,7 +60,7 @@ var Queries = map[string]string{
 	// $afterCursor: the cursor to start from
 	"repository_branches": `query ($owner: String!, $name: String!, $numBranches: Int!, $afterCursor: String) {
 		repository(owner: $owner, name: $name) {
-			refs(refPrefix: "refs/heads/", orderBy: {direction: DESC, field: TAG_COMMIT_DATE}, first: $numBranches, after: $afterCursor) {
+			refs(refPrefix: "refs/heads/", first: $numBranches, after: $afterCursor) {
 				nodes {
 					name
 				}
@@ -68,6 +68,13 @@ var Queries = map[string]string{
 					endCursor
 					hasNextPage
 				}
+			}
+		}
+	}`,
+	"repository_default_branch": `query ($owner: String!, $name: String!) {
+		repository(owner: $owner, name: $name) {
+			defaultBranchRef {
+			  name
 			}
 		}
 	}`,

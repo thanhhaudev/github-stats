@@ -65,7 +65,7 @@ type Commit struct {
 	Additions     int       `json:"additions"`
 	Deletions     int       `json:"deletions"`
 	CommittedDate time.Time `json:"committedDate"`
-	Oid           string    `json:"oid"`
+	OID           string    `json:"oid"`
 }
 
 type Commits struct {
@@ -118,4 +118,21 @@ func (r *RepositoryService) Branches(ctx context.Context, request *Request) (*Br
 	}
 
 	return resp.Data.Repository.Refs, nil
+}
+
+// DefaultBranch returns the default branch of a repository
+func (r *RepositoryService) DefaultBranch(ctx context.Context, request *Request) (*Branch, error) {
+	var resp struct {
+		Data struct {
+			Repository struct {
+				DefaultBranchRef Branch `json:"defaultBranchRef"`
+			} `json:"repository"`
+		} `json:"data"`
+	}
+
+	if err := r.Client.PostWithContext(ctx, request, &resp); err != nil {
+		return nil, err
+	}
+
+	return &resp.Data.Repository.DefaultBranchRef, nil
 }

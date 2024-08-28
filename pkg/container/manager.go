@@ -90,7 +90,6 @@ func (c *ClientManager) GetBranches(ctx context.Context, owner, name string, num
 func (c *ClientManager) GetOwnedRepositories(ctx context.Context, username string, numRepos int) ([]github.Repository, error) {
 	var allRepos []github.Repository
 	var cursor *string
-
 	// Create a new request & set the variables values
 	request := github.NewRequest(github.Queries["repositories"])
 	request.Var("username", username)
@@ -128,7 +127,7 @@ func (c *ClientManager) GetContributedToRepositories(ctx context.Context, userna
 	var cursor *string
 
 	// Create a new request & set the variables values
-	request := github.NewRequest(github.Queries["repositoriesContributedTo"])
+	request := github.NewRequest(github.Queries["repositories_contributed_to"])
 	request.Var("username", username)
 	request.Var("numRepos", numRepos)
 
@@ -167,6 +166,20 @@ func (c *ClientManager) GetViewer(ctx context.Context) (*github.Viewer, error) {
 	}
 
 	return viewer, nil
+}
+
+// GetDefaultBranch returns the default branch of a repository
+func (c *ClientManager) GetDefaultBranch(ctx context.Context, owner, name string) (*github.Branch, error) {
+	request := github.NewRequest(github.Queries["repository_default_branch"])
+	request.Var("owner", owner)
+	request.Var("name", name)
+
+	branch, err := c.GitHubClient.Repositories.DefaultBranch(ctx, request)
+	if err != nil {
+		return nil, err
+	}
+
+	return branch, nil
 }
 
 // NewClientManager creates a new ClientManager
