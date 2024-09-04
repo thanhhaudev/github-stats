@@ -3,7 +3,6 @@ package writer
 import (
 	"fmt"
 	"math"
-	"os"
 	"strings"
 	"time"
 
@@ -37,33 +36,6 @@ type WeekTime int
 
 func (w WeekTime) String() string {
 	return longWeekTimeNames[w]
-}
-
-// UpdateReadme updates the README.md file with the provided stats
-func UpdateReadme(u, n string) error {
-	f := "README.md"
-	b, err := os.ReadFile("README.md")
-	if err != nil {
-		return err
-	}
-
-	if n == "" {
-		n = "readme-stats"
-	}
-
-	s := fmt.Sprintf("<!--START_SECTION:%s-->", n)
-	e := fmt.Sprintf("<!--END_SECTION:%s-->", n)
-
-	si := strings.Index(string(b), s)
-	ei := strings.Index(string(b), e)
-
-	if si == -1 || ei == -1 {
-		return fmt.Errorf("section tags %s or %s not found in %s", s, e, f)
-	}
-
-	u = string(b)[:si+len(s)] + "\n" + u + "\n" + string(b)[ei:]
-
-	return os.WriteFile(f, []byte(u), 0644)
 }
 
 // MakeWakaActivityList returns a list of activities

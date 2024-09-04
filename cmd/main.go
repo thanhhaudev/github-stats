@@ -2,8 +2,11 @@ package main
 
 import (
 	"context"
+	"fmt"
 	"log"
 	"os"
+	"os/exec"
+	"strings"
 	"time"
 
 	_ "github.com/joho/godotenv/autoload"
@@ -11,7 +14,6 @@ import (
 	"github.com/thanhhaudev/github-stats/pkg/container"
 	"github.com/thanhhaudev/github-stats/pkg/github"
 	"github.com/thanhhaudev/github-stats/pkg/wakatime"
-	"github.com/thanhhaudev/github-stats/pkg/writer"
 )
 
 func main() {
@@ -21,12 +23,12 @@ func main() {
 	ctx, cancel := context.WithCancel(context.Background())
 	defer cancel()
 
-	ghToken := os.Getenv("GITHUB_TOKEN")
-	if ghToken == "" {
+	token := os.Getenv("GITHUB_TOKEN")
+	if token == "" {
 		logger.Fatalln("❌ GITHUB_TOKEN is required")
 	}
 
-	gc := github.NewGitHub(ghToken)
+	gc := github.NewGitHub(token)
 	wc := wakatime.NewWakaTime(os.Getenv("WAKATIME_API_KEY"), wakatime.StatsRange(os.Getenv("WAKATIME_RANGE")))
 	dc := container.NewDataContainer(logger, container.NewClientManager(wc, gc))
 	if err := dc.Build(ctx); err != nil {
@@ -38,9 +40,22 @@ func main() {
 		panic(err)
 	}
 
-	err = writer.UpdateReadme(dc.GetStats(cl), os.Getenv("SECTION_NAME"))
+	logger.Println("🔧 Setting up git config...")
+	err = setupGitConfig(dc.Data.Viewer.Login)
 	if err != nil {
-		panic(err)
+		logger.Fatalf("Error setting up git config: %v", err)
+	}
+
+	logger.Println("📝 Updating README.md...")
+	err = updateReadme(dc.GetStats(cl), os.Getenv("SECTION_NAME"))
+	if err != nil {
+		logger.Fatalf("Error updating README.md: %v", err)
+	}
+
+	logger.Println("📤 Committing and pushing changes...")
+	err = commitAndPushReadme("📝 Update README.md", "main")
+	if err != nil {
+		logger.Fatalf("Error committing and pushing changes: %v", err)
 	}
 
 	logger.Printf("🚩 Execution Duration: %s\n", time.Since(start))
@@ -60,4 +75,104 @@ func setClock(logger *log.Logger) (clock.Clock, error) {
 	}
 
 	return cl, nil
+}
+
+// setupGitConfig sets up the git configuration
+func setupGitConfig(owner string) error {
+	cmd := exec.Command("git", "config", "--global", "--add", "safe.directory", "/github/workspace")
+	output, err := cmd.CombinedOutput()
+	if err != nil {
+		return fmt.Errorf("git config safe.directory error: %v, output: %s", err, string(output))
+	}
+
+	cmd = exec.Command("git", "config", "--global", "user.name", "GitHub Action")
+	output, err = cmd.CombinedOutput()
+	if err != nil {
+		return fmt.Errorf("git config user.name error: %v, output: %s", err, string(output))
+	}
+
+	cmd = exec.Command("git", "config", "--global", "user.email", "action@github.com")
+	output, err = cmd.CombinedOutput()
+	if err != nil {
+		return fmt.Errorf("git config user.email error: %v, output: %s", err, string(output))
+	}
+
+	cmd = exec.Command("git", "remote", "set-url", "origin", fmt.Sprintf("https://%s@github.com/%s/%s.git", os.Getenv("GITHUB_TOKEN"), owner, owner))
+	output, err = cmd.CombinedOutput()
+	if err != nil {
+		return fmt.Errorf("git remote set-url error: %v, output: %s", err, string(output))
+	}
+
+	return nil
+}
+
+// hasReadmeChanged checks if README.md has changed
+func hasReadmeChanged() (bool, error) {
+	cmd := exec.Command("git", "status", "--porcelain", "README.md")
+	output, err := cmd.Output()
+	if err != nil {
+		return false, err
+	}
+
+	return strings.TrimSpace(string(output)) != "", nil
+}
+
+// commitAndPushReadme Commit and push changes if README.md has changed
+func commitAndPushReadme(commitMessage, branch string) error {
+	changed, err := hasReadmeChanged()
+	if err != nil {
+		return err
+	}
+	if !changed {
+		return nil
+	}
+
+	// Add the file to the staging area
+	cmd := exec.Command("git", "add", "README.md")
+	cmd.Stdout = os.Stdout
+	cmd.Stderr = os.Stderr
+	if err := cmd.Run(); err != nil {
+		return err
+	}
+
+	// Commit the changes
+	cmd = exec.Command("git", "commit", "-m", commitMessage)
+	cmd.Stdout = os.Stdout
+	cmd.Stderr = os.Stderr
+	if err := cmd.Run(); err != nil {
+		return err
+	}
+
+	// Push the changes
+	cmd = exec.Command("git", "push", "origin", branch)
+	cmd.Stdout = os.Stdout
+	cmd.Stderr = os.Stderr
+	return cmd.Run()
+}
+
+// updateReadme updates the README.md file with the provided stats
+func updateReadme(u, n string) error {
+	f := "README.md"
+	b, err := os.ReadFile("README.md")
+	if err != nil {
+		return err
+	}
+
+	if n == "" {
+		n = "readme-stats"
+	}
+
+	s := fmt.Sprintf("<!--START_SECTION:%s-->", n)
+	e := fmt.Sprintf("<!--END_SECTION:%s-->", n)
+
+	si := strings.Index(string(b), s)
+	ei := strings.Index(string(b), e)
+
+	if si == -1 || ei == -1 {
+		return fmt.Errorf("section tags %s or %s not found in %s", s, e, f)
+	}
+
+	u = string(b)[:si+len(s)] + "\n" + u + "\n" + string(b)[ei:]
+
+	return os.WriteFile(f, []byte(u), 0644)
 }
