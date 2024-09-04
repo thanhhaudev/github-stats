@@ -61,7 +61,7 @@ func (d *DataContainer) GetStats(cl clock.Clock) string {
 }
 
 func showWidgets(w map[string]string, b *strings.Builder) {
-	for _, k := range strings.Split(os.Getenv("SHOW_WIDGETS"), ",") {
+	for _, k := range strings.Split(os.Getenv("SHOW_METRICS"), ",") {
 		v, ok := w[k]
 		if !ok {
 			continue
