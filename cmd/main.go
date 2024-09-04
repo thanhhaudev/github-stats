@@ -21,7 +21,12 @@ func main() {
 	ctx, cancel := context.WithCancel(context.Background())
 	defer cancel()
 
-	gc := github.NewGitHub(os.Getenv("GITHUB_TOKEN"))
+	ghToken := os.Getenv("GITHUB_TOKEN")
+	if ghToken == "" {
+		logger.Fatalln("❌ GITHUB_TOKEN is required")
+	}
+
+	gc := github.NewGitHub(ghToken)
 	wc := wakatime.NewWakaTime(os.Getenv("WAKATIME_API_KEY"), wakatime.StatsRange(os.Getenv("WAKATIME_RANGE")))
 	dc := container.NewDataContainer(logger, container.NewClientManager(wc, gc))
 	if err := dc.Build(ctx); err != nil {
