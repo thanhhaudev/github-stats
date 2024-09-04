@@ -9,6 +9,7 @@ import (
 
 	"github.com/thanhhaudev/github-stats/pkg/clock"
 	"github.com/thanhhaudev/github-stats/pkg/github"
+	"github.com/thanhhaudev/github-stats/pkg/wakatime"
 	"github.com/thanhhaudev/github-stats/pkg/writer"
 )
 
@@ -25,6 +26,7 @@ type DataContainer struct {
 		Viewer       *github.Viewer
 		Repositories []github.Repository
 		Commits      []github.Commit
+		WakaTime     *wakatime.Stats
 	}
 }
 
@@ -34,7 +36,10 @@ func (d *DataContainer) GetGithubWidgets(com *CommitStats) map[string]string {
 		"LANGUAGE_PER_REPO":   writer.MakeLanguagePerRepoList(d.Data.Repositories),
 		"COMMIT_DAYS_OF_WEEK": writer.MakeCommitDaysOfWeekList(com.DailyCommits, com.TotalCommits),
 		"COMMIT_TIME_OF_DAY":  writer.MakeCommitTimeOfDayList(d.Data.Commits),
-		"WAKATIME_SPENT_TIME": "",
+		"WAKATIME_SPENT_TIME": writer.MakeWakaActivityList(
+			d.Data.WakaTime,
+			strings.Split(os.Getenv("WAKATIME_DATA"), ","),
+		),
 	}
 }
 
@@ -221,6 +226,25 @@ func (d *DataContainer) InitCommits(ctx context.Context) error {
 	return nil
 }
 
+// InitWakaStats initializes the WakaTime statistics
+func (d *DataContainer) InitWakaStats(ctx context.Context) error {
+	d.Logger.Println("Fetching WakaTime statistics...")
+
+	v, err := d.ClientManager.GetWakaTimeStats(ctx)
+	if err != nil {
+		return err
+	}
+
+	if v.Data.Status != "ok" {
+		d.Logger.Println("WakaTime data is not available")
+		return nil
+	}
+
+	d.Data.WakaTime = v
+
+	return nil
+}
+
 // Build builds the data container
 func (d *DataContainer) Build(ctx context.Context) error {
 	d.Logger.Println("Building data container...")
@@ -244,6 +268,17 @@ func (d *DataContainer) Build(ctx context.Context) error {
 		}
 
 		d.Logger.Println("Fetching data from GitHub APIs successfully")
+	}
+
+	// if the WakaTime client is not nil, fetch data from WakaTime APIs
+	if d.ClientManager.WakaTimeClient != nil {
+		d.Logger.Println("Fetching data from Wakatime APIs...")
+		err := d.InitWakaStats(ctx)
+		if err != nil {
+			return err
+		}
+
+		d.Logger.Println("Fetching data from Wakatime APIs successfully")
 	}
 
 	d.Logger.Println("Built data container successfully")

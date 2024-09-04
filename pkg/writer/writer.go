@@ -8,6 +8,7 @@ import (
 	"time"
 
 	"github.com/thanhhaudev/github-stats/pkg/github"
+	"github.com/thanhhaudev/github-stats/pkg/wakatime"
 )
 
 const (
@@ -20,6 +21,9 @@ type Data struct {
 	Name        string
 	Description string
 	Percent     float64
+	Hours       int
+	Minutes     int
+	Seconds     int
 }
 
 const (
@@ -58,8 +62,70 @@ func UpdateReadme(u, n string) error {
 	return os.WriteFile(f, []byte(u), 0644)
 }
 
+// MakeWakaActivityList returns a list of activities
+func MakeWakaActivityList(s *wakatime.Stats, i []string) string {
+	if s == nil || len(i) == 0 {
+		return ""
+	}
+
+	var res string
+	for _, v := range i {
+		switch v {
+		case "LANGUAGES":
+			res = res + fmt.Sprintf("💬 Programming Languages:") + makeList(buildWakaData(s.Data.Languages)...) + "\n"
+		case "EDITORS":
+			res = res + fmt.Sprintf("📝 Editors:") + makeList(buildWakaData(s.Data.Editors)...) + "\n"
+		case "OPERATING_SYSTEMS":
+			res = res + fmt.Sprintf("💻 Operating Systems:") + makeList(buildWakaData(s.Data.OperatingSystems)...) + "\n"
+		case "PROJECTS":
+			res = res + fmt.Sprintf("📦 Projects:") + makeList(buildWakaData(s.Data.Projects)...) + "\n"
+		}
+	}
+
+	res = strings.TrimSuffix(res, "\n") // trim last newline
+
+	return fmt.Sprintf("**📊 %s**\n\n", wakaRangeNames[s.Data.Range]) + "```text\n" + res + "```\n\n"
+}
+
+func buildWakaData(i []wakatime.StatsItem) []Data {
+	var (
+		data      []Data
+		otherData Data
+	)
+	for _, d := range i {
+		if d.Minutes < 10 && d.Hours == 0 {
+			otherData.Percent += d.Percent
+			otherData.Hours += d.Hours
+			otherData.Minutes += d.Minutes
+			otherData.Seconds += d.Seconds
+
+			continue
+		}
+
+		data = append(data, Data{
+			Name:        d.Name,
+			Description: d.Text,
+			Percent:     d.Percent,
+			Hours:       d.Hours,
+			Minutes:     d.Minutes,
+			Seconds:     d.Seconds,
+		})
+	}
+
+	if otherData.Percent > 0 {
+		data = append(data, Data{
+			Name:        "Others",
+			Description: formatTime(otherData.Hours, otherData.Minutes),
+			Percent:     otherData.Percent,
+		})
+	}
+
+	return data
+}
+
+// MakeLastUpdatedOn returns a string with the last updated time
 func MakeLastUpdatedOn(t string) string {
-	return fmt.Sprintf("\n\n>⏳ Last updated on %s", t)
+	return fmt.Sprintf("\n\n*⏳ Last updated on %s*", t)
 }
 
 // MakeCommitTimeOfDayList returns a list of commits made during different times of the day
@@ -106,6 +172,7 @@ func MakeCommitTimeOfDayList(commits []github.Commit) string {
 				if weekCommit > 1 {
 					return "commits"
 				}
+
 				return "commit"
 			}()),
 			Percent: float64(weekCommit) / float64(total) * 100,
@@ -271,4 +338,29 @@ func addCommas(n int) string {
 	}
 
 	return strings.Join(result, "")
+}
+
+func formatTime(hours, minutes int) string {
+	var result string
+	if hours > 0 {
+		result += fmt.Sprintf("%d %s", hours, func() string {
+			if hours > 1 {
+				return "hours"
+			}
+
+			return "hour"
+		}())
+	}
+
+	if minutes > 0 {
+		result += fmt.Sprintf(" %d %s", minutes, func() string {
+			if minutes > 1 {
+				return "minutes"
+			}
+
+			return "minute"
+		}())
+	}
+
+	return strings.TrimSpace(result)
 }

@@ -182,6 +182,16 @@ func (c *ClientManager) GetDefaultBranch(ctx context.Context, owner, name string
 	return branch, nil
 }
 
+// GetWakaTimeStats returns the user's coding activity statistics
+func (c *ClientManager) GetWakaTimeStats(ctx context.Context) (*wakatime.Stats, error) {
+	stats, err := c.WakaTimeClient.Stats.Get(ctx)
+	if err != nil {
+		return nil, err
+	}
+
+	return stats, nil
+}
+
 // NewClientManager creates a new ClientManager
 func NewClientManager(w *wakatime.WakaTime, g *github.GitHub) *ClientManager {
 	return &ClientManager{w, g}

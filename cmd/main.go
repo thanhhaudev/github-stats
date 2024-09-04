@@ -22,9 +22,8 @@ func main() {
 	defer cancel()
 
 	gc := github.NewGitHub(os.Getenv("GITHUB_TOKEN"))
-	wc := wakatime.NewWakaTime(os.Getenv("WAKATIME_API_KEY"))
+	wc := wakatime.NewWakaTime(os.Getenv("WAKATIME_API_KEY"), wakatime.StatsRange(os.Getenv("WAKATIME_RANGE")))
 	dc := container.NewDataContainer(logger, container.NewClientManager(wc, gc))
-
 	if err := dc.Build(ctx); err != nil {
 		logger.Fatalln(err)
 	}

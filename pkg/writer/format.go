@@ -20,3 +20,11 @@ var weekTimeStatuses = []string{
 	"A Twilight Taskmaster 🌆",
 	"A Night Owl 🦉",
 }
+
+var wakaRangeNames = map[string]string{
+	"last_7_days":   "This Week I Spent My Time On",
+	"last_30_days":  "This Month I Spent My Time On",
+	"last_6_months": "Last 6 Months I Spent My Time On",
+	"last_year":     "Last Year I Spent My Time On",
+	"all_time":      "All The Time I Spent On",
+}
