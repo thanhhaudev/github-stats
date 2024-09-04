@@ -28,17 +28,12 @@ func main() {
 		logger.Fatalln(err)
 	}
 
-	sectionName := os.Getenv("SECTION_NAME")
-	if sectionName == "" {
-		sectionName = "readme-stats"
-	}
-
 	cl, err := setClock(logger)
 	if err != nil {
 		panic(err)
 	}
 
-	err = writer.UpdateReadme(dc.GetStats(cl), sectionName)
+	err = writer.UpdateReadme(dc.GetStats(cl), os.Getenv("SECTION_NAME"))
 	if err != nil {
 		panic(err)
 	}

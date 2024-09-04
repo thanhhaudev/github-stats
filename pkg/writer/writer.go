@@ -47,6 +47,10 @@ func UpdateReadme(u, n string) error {
 		return err
 	}
 
+	if n == "" {
+		n = "readme-stats"
+	}
+
 	s := fmt.Sprintf("<!--START_SECTION:%s-->", n)
 	e := fmt.Sprintf("<!--END_SECTION:%s-->", n)
 
