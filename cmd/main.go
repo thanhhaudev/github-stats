@@ -53,10 +53,19 @@ func main() {
 		logger.Fatalf("Error updating README.md: %v", err)
 	}
 
-	logger.Println("📤 Committing and pushing changes...")
-	err = commitAndPushReadme("📝 Update README.md", "main")
+	changed, err := hasReadmeChanged()
 	if err != nil {
-		logger.Fatalf("Error committing and pushing changes: %v", err)
+		logger.Fatalf("Error checking if README.md has changed: %v", err)
+	}
+
+	if changed {
+		logger.Println("📤 Committing and pushing changes...")
+		err = commitAndPushReadme("📝 Update README.md", "main")
+		if err != nil {
+			logger.Fatalf("Error committing and pushing changes: %v", err)
+		}
+	} else {
+		logger.Println("📤 No changes to commit")
 	}
 
 	logger.Printf("🚩 Execution Duration: %s\n", time.Since(start))
@@ -125,14 +134,6 @@ func hasReadmeChanged() (bool, error) {
 
 // commitAndPushReadme Commit and push changes if README.md has changed
 func commitAndPushReadme(commitMessage, branch string) error {
-	changed, err := hasReadmeChanged()
-	if err != nil {
-		return err
-	}
-	if !changed {
-		return nil
-	}
-
 	// Add the file to the staging area
 	cmd := exec.Command("git", "add", "README.md")
 	cmd.Stdout = os.Stdout
