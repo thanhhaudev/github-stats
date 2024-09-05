@@ -174,7 +174,7 @@ func (d *DataContainer) InitCommits(ctx context.Context) error {
 	}
 
 	if hiddenRepoInfo {
-		d.Logger.Println("Fetching commits from %d %s...", repoCount, func() string {
+		d.Logger.Printf("Fetching commits from %d %s...", repoCount, func() string {
 			if repoCount == 1 {
 				return "repository"
 			}
