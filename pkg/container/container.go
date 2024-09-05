@@ -30,8 +30,8 @@ type DataContainer struct {
 	}
 }
 
-// GetGithubWidgets returns the widgets to display
-func (d *DataContainer) GetGithubWidgets(com *CommitStats) map[string]string {
+// metrics returns the metrics map
+func (d *DataContainer) metrics(com *CommitStats) map[string]string {
 	return map[string]string{
 		"LANGUAGE_PER_REPO":   writer.MakeLanguagePerRepoList(d.Data.Repositories),
 		"COMMIT_DAYS_OF_WEEK": writer.MakeCommitDaysOfWeekList(com.DailyCommits, com.TotalCommits),
@@ -48,19 +48,8 @@ func (d *DataContainer) GetStats(cl clock.Clock) string {
 	d.Logger.Println("Creating statistics...")
 	b := strings.Builder{}
 
-	// widgets
-	w := d.GetGithubWidgets(d.CalculateCommits())
-	showWidgets(w, &b)
-
-	// Show last update time if enabled
-	showLastUpdated(cl, &b)
-
-	d.Logger.Println("Created statistics successfully")
-
-	return b.String()
-}
-
-func showWidgets(w map[string]string, b *strings.Builder) {
+	// show metrics based on the environment variable
+	w := d.metrics(d.CalculateCommits())
 	for _, k := range strings.Split(os.Getenv("SHOW_METRICS"), ",") {
 		v, ok := w[k]
 		if !ok {
@@ -69,6 +58,13 @@ func showWidgets(w map[string]string, b *strings.Builder) {
 
 		b.WriteString(v)
 	}
+
+	// Show last update time if enabled
+	showLastUpdated(cl, &b)
+
+	d.Logger.Println("Created statistics successfully")
+
+	return b.String()
 }
 
 func showLastUpdated(cl clock.Clock, b *strings.Builder) {
