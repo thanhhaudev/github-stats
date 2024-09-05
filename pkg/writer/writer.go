@@ -328,20 +328,20 @@ func formatTime(hours, minutes int) string {
 	if hours > 0 {
 		result += fmt.Sprintf("%d %s", hours, func() string {
 			if hours > 1 {
-				return "hours"
+				return "hrs"
 			}
 
-			return "hour"
+			return "hr"
 		}())
 	}
 
 	if minutes > 0 {
 		result += fmt.Sprintf(" %d %s", minutes, func() string {
 			if minutes > 1 {
-				return "minutes"
+				return "mins"
 			}
 
-			return "minute"
+			return "min"
 		}())
 	}
 
