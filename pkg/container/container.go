@@ -49,7 +49,7 @@ func (d *DataContainer) GetStats(cl clock.Clock) string {
 	b := strings.Builder{}
 
 	// widgets
-	w := d.GetGithubWidgets(d.CalculateCommits(cl))
+	w := d.GetGithubWidgets(d.CalculateCommits())
 	showWidgets(w, &b)
 
 	// Show last update time if enabled
@@ -245,6 +245,7 @@ func (d *DataContainer) InitCommits(ctx context.Context) error {
 		for _, commit := range commits {
 			if !seenOIDs[commit.OID] {
 				seenOIDs[commit.OID] = true
+				commit.CommittedDate = ctx.Value(clock.ClockKey{}).(clock.Clock).ToClockTz(commit.CommittedDate)
 				d.Data.Commits = append(d.Data.Commits, commit)
 			}
 		}

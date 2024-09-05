@@ -19,8 +19,14 @@ import (
 func main() {
 	logger := log.New(os.Stdout, "", log.Lmsgprefix)
 	logger.Println("🚀 Starting...")
+	cl, err := setClock(logger)
+	if err != nil {
+		panic(err)
+	}
+
 	start := time.Now()
 	ctx, cancel := context.WithCancel(context.Background())
+	ctx = withClock(ctx, cl)
 	defer cancel()
 
 	token := os.Getenv("GITHUB_TOKEN")
@@ -33,11 +39,6 @@ func main() {
 	dc := container.NewDataContainer(logger, container.NewClientManager(wc, gc))
 	if err := dc.Build(ctx); err != nil {
 		logger.Fatalln(err)
-	}
-
-	cl, err := setClock(logger)
-	if err != nil {
-		panic(err)
 	}
 
 	logger.Println("🔧 Setting up git config...")
@@ -104,6 +105,11 @@ func setupGitConfig(owner string) error {
 	}
 
 	return nil
+}
+
+// withClock adds the clock to the context
+func withClock(ctx context.Context, cl clock.Clock) context.Context {
+	return context.WithValue(ctx, clock.ClockKey{}, cl)
 }
 
 // hasReadmeChanged checks if README.md has changed
