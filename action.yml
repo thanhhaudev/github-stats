@@ -5,6 +5,9 @@ inputs:
   GITHUB_TOKEN:
     description: 'GitHub token with repo access'
     required: true
+  SHOW_METRICS:
+    description: 'Use this to specify which metrics to show'
+    required: true
   WAKATIME_API_KEY:
     description: 'WakaTime API key'
     required: false
@@ -13,9 +16,6 @@ inputs:
     required: false
   WAKATIME_RANGE:
     description: 'Range of data to show from WakaTime'
-    required: false
-  SHOW_METRICS:
-    description: 'Use this to specify which metrics to show'
     required: false
   TIME_ZONE:
     description: 'Time zone to show in the metrics'
