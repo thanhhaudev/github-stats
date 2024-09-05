@@ -113,8 +113,8 @@ func MakeCommitTimeOfDayList(commits []github.Commit) string {
 	timeRanges := map[WeekTime][2]int{
 		Morning: {6, 12},
 		Daytime: {12, 18},
-		Evening: {18, 24},
-		Night:   {0, 6},
+		Evening: {18, 23},
+		Night:   {23, 6},
 	}
 
 	total := len(commits)
@@ -123,9 +123,16 @@ func MakeCommitTimeOfDayList(commits []github.Commit) string {
 	for _, commit := range commits {
 		hour := commit.CommittedDate.Hour()
 		for period, rangeHours := range timeRanges {
-			if hour >= rangeHours[0] && hour < rangeHours[1] {
-				counts[period]++
-				break
+			if rangeHours[0] < rangeHours[1] { // if the range is not across midnight
+				if hour >= rangeHours[0] && hour < rangeHours[1] {
+					counts[period]++
+					break
+				}
+			} else { // if the range is across midnight
+				if hour >= rangeHours[0] || hour < rangeHours[1] {
+					counts[period]++
+					break
+				}
 			}
 		}
 	}
