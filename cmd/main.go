@@ -60,7 +60,7 @@ func main() {
 
 	if changed {
 		logger.Println("📤 Committing and pushing changes...")
-		err = commitAndPushReadme("📝 Update README.md", "main")
+		err = commitAndPushReadme("📝 Update README.md", os.Getenv("BRANCH_NAME"))
 		if err != nil {
 			logger.Fatalf("Error committing and pushing changes: %v", err)
 		}
@@ -134,6 +134,10 @@ func hasReadmeChanged() (bool, error) {
 
 // commitAndPushReadme Commit and push changes if README.md has changed
 func commitAndPushReadme(commitMessage, branch string) error {
+	if branch == "" {
+		branch = "main"
+	}
+
 	// Add the file to the staging area
 	cmd := exec.Command("git", "add", "README.md")
 	cmd.Stdout = os.Stdout
