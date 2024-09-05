@@ -48,7 +48,7 @@ func MakeWakaActivityList(s *wakatime.Stats, i []string) string {
 	for _, v := range i {
 		switch v {
 		case "LANGUAGES":
-			res = res + fmt.Sprintf("💬 Programming Languages:") + makeList(buildWakaData(s.Data.Languages)...) + "\n"
+			res = res + fmt.Sprintf("💬 Languages:") + makeList(buildWakaData(s.Data.Languages)...) + "\n"
 		case "EDITORS":
 			res = res + fmt.Sprintf("📝 Editors:") + makeList(buildWakaData(s.Data.Editors)...) + "\n"
 		case "OPERATING_SYSTEMS":

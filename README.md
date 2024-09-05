@@ -17,7 +17,7 @@ This GitHub Action collects your GitHub data and coding activity from WakaTime. 
    The Action will replace everything between these two comments with the metrics. You can also specify a section name in the `SECTION_NAME` environment variable.
 
 
-3. **GitHub Access Token**: To get commit information, you need a GitHub Access Token with `repo` and `user` permissions, available [here](#). 
+3. **GitHub Access Token**: To get commit information, you need a GitHub Access Token with `repo` and `user` permissions, available [here](https://github.com/settings/tokens). 
    >Although giving `repo` access might seem **risky**, this Action only accesses commit timestamps and lines of code added or deleted in the repositories you contributed to, which is completely safe.
 
 4. **WakaTime API Key (Optional)**: If you want to use the `WAKATIME_SPENT_TIME` metric, you will need a WakaTime API Key. You can get this from your [WakaTime Account Settings](https://wakatime.com/settings/api-key).
@@ -27,6 +27,8 @@ This GitHub Action collects your GitHub data and coding activity from WakaTime. 
 
    + **WAKATIME_API_KEY**: Your WakaTime API Key.
    + **GH_TOKEN**: Your GitHub Access Token.
+
+<img width="1128" alt="image" src="https://github.com/user-attachments/assets/40d8c7aa-2c44-40d5-820c-9e93e8637554">
 
 
 ## Usage
@@ -94,7 +96,7 @@ Use the `WAKATIME_DATA` environment variable to specify the data to show.
    ```
 + **LANGUAGES**: The languages you code in.
    ```
-  💬 Programming Languages:
+  💬 Languages:
    Go                       22 hrs 19 mins      ████████████░░░░░░░░░░░░░   49.16%
    JavaScript               14 hrs 41 mins      ████████░░░░░░░░░░░░░░░░░   32.34%
    Python                   1 hr 53 mins        █░░░░░░░░░░░░░░░░░░░░░░░░   04.18%
