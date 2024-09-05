@@ -32,6 +32,15 @@ inputs:
   HIDE_REPO_INFO:
     description: 'Hide repository information'
     required: false
+  COMMIT_MESSAGE:
+    description: 'Commit message'
+    required: false
+  COMMIT_USER_NAME:
+    description: 'Commit user name'
+    required: false
+  COMMIT_USER_EMAIL:
+    description: 'Commit user email'
+    required: false
 runs:
   using: docker
   image: Dockerfile

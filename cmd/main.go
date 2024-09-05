@@ -5,7 +5,6 @@ import (
 	"fmt"
 	"log"
 	"os"
-	"os/exec"
 	"strings"
 	"time"
 
@@ -42,7 +41,12 @@ func main() {
 	}
 
 	logger.Println("🔧 Setting up git config...")
-	err = setupGitConfig(dc.Data.Viewer.Login)
+	err = setupGitConfig(
+		dc.Data.Viewer.Login,
+		os.Getenv("GITHUB_TOKEN"),
+		os.Getenv("COMMIT_USER_NAME"),
+		os.Getenv("COMMIT_USER_EMAIL"),
+	)
 	if err != nil {
 		logger.Fatalf("Error setting up git config: %v", err)
 	}
@@ -60,7 +64,7 @@ func main() {
 
 	if changed {
 		logger.Println("📤 Committing and pushing changes...")
-		err = commitAndPushReadme("📝 Update README.md", os.Getenv("BRANCH_NAME"))
+		err = commitAndPushReadme(os.Getenv("COMMIT_MESSAGE"), os.Getenv("BRANCH_NAME"))
 		if err != nil {
 			logger.Fatalf("Error committing and pushing changes: %v", err)
 		}
@@ -71,6 +75,7 @@ func main() {
 	logger.Printf("🚩 Execution Duration: %s\n", time.Since(start))
 }
 
+// setClock sets the clock and timezone
 func setClock(logger *log.Logger) (clock.Clock, error) {
 	cl := clock.NewClock()
 	if tz := os.Getenv("TIME_ZONE"); tz != "" {
@@ -87,78 +92,9 @@ func setClock(logger *log.Logger) (clock.Clock, error) {
 	return cl, nil
 }
 
-// setupGitConfig sets up the git configuration
-func setupGitConfig(owner string) error {
-	cmd := exec.Command("git", "config", "--global", "--add", "safe.directory", "/github/workspace")
-	output, err := cmd.CombinedOutput()
-	if err != nil {
-		return fmt.Errorf("git config safe.directory error: %v, output: %s", err, string(output))
-	}
-
-	cmd = exec.Command("git", "config", "--global", "user.name", "GitHub Action")
-	output, err = cmd.CombinedOutput()
-	if err != nil {
-		return fmt.Errorf("git config user.name error: %v, output: %s", err, string(output))
-	}
-
-	cmd = exec.Command("git", "config", "--global", "user.email", "action@github.com")
-	output, err = cmd.CombinedOutput()
-	if err != nil {
-		return fmt.Errorf("git config user.email error: %v, output: %s", err, string(output))
-	}
-
-	cmd = exec.Command("git", "remote", "set-url", "origin", fmt.Sprintf("https://%s@github.com/%s/%s.git", os.Getenv("GITHUB_TOKEN"), owner, owner))
-	output, err = cmd.CombinedOutput()
-	if err != nil {
-		return fmt.Errorf("git remote set-url error: %v, output: %s", err, string(output))
-	}
-
-	return nil
-}
-
 // withClock adds the clock to the context
 func withClock(ctx context.Context, cl clock.Clock) context.Context {
 	return context.WithValue(ctx, clock.ClockKey{}, cl)
-}
-
-// hasReadmeChanged checks if README.md has changed
-func hasReadmeChanged() (bool, error) {
-	cmd := exec.Command("git", "status", "--porcelain", "README.md")
-	output, err := cmd.Output()
-	if err != nil {
-		return false, err
-	}
-
-	return strings.TrimSpace(string(output)) != "", nil
-}
-
-// commitAndPushReadme Commit and push changes if README.md has changed
-func commitAndPushReadme(commitMessage, branch string) error {
-	if branch == "" {
-		branch = "main"
-	}
-
-	// Add the file to the staging area
-	cmd := exec.Command("git", "add", "README.md")
-	cmd.Stdout = os.Stdout
-	cmd.Stderr = os.Stderr
-	if err := cmd.Run(); err != nil {
-		return err
-	}
-
-	// Commit the changes
-	cmd = exec.Command("git", "commit", "-m", commitMessage)
-	cmd.Stdout = os.Stdout
-	cmd.Stderr = os.Stderr
-	if err := cmd.Run(); err != nil {
-		return err
-	}
-
-	// Push the changes
-	cmd = exec.Command("git", "push", "origin", branch)
-	cmd.Stdout = os.Stdout
-	cmd.Stderr = os.Stderr
-	return cmd.Run()
 }
 
 // updateReadme updates the README.md file with the provided stats
