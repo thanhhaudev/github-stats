@@ -155,15 +155,41 @@ func (d *DataContainer) InitRepositories(ctx context.Context) error {
 func (d *DataContainer) InitCommits(ctx context.Context) error {
 	d.Logger.Println("Fetching commits...")
 	fetchAllBranches := os.Getenv("ONLY_MAIN_BRANCH") != "true"
+	hiddenRepoInfo := os.Getenv("HIDE_REPO_INFO") == "true"
 	repoCount := len(d.Data.Repositories)
 	errChan := make(chan error, repoCount)
 	commitChan := make(chan []github.Commit, repoCount)
 	seenOIDs := make(map[string]bool)
+	mask := func(input string) string {
+		length := len(input)
+		if length <= 2 {
+			return input // No masking for very short strings
+		}
+
+		num := length / 3
+		prefixLength := (length - num) / 2
+		suffixLength := length - prefixLength - num
+
+		return input[:prefixLength] + strings.Repeat("*", num) + input[len(input)-suffixLength:]
+	}
+
+	if hiddenRepoInfo {
+		d.Logger.Println("Fetching commits from %d %s...", repoCount, func() string {
+			if repoCount == 1 {
+				return "repository"
+			}
+
+			return "repositories"
+		}())
+	}
 
 	for _, repo := range d.Data.Repositories {
 		go func(repo github.Repository) {
 			if fetchAllBranches {
-				d.Logger.Println("Fetching commits from all branches of repository:", repo.Name)
+				if !hiddenRepoInfo {
+					d.Logger.Println("Fetching commits from all branches of repository:", mask(repo.Name))
+				}
+
 				branches, err := d.ClientManager.GetBranches(ctx, repo.Owner.Login, repo.Name, branchPerQuery)
 				if err != nil {
 					errChan <- err
@@ -183,7 +209,10 @@ func (d *DataContainer) InitCommits(ctx context.Context) error {
 
 				commitChan <- allCommits
 			} else {
-				d.Logger.Println("Fetching commits from the default branch of repository:", repo.Name)
+				if !hiddenRepoInfo {
+					d.Logger.Println("Fetching commits from the default branch of repository:", mask(repo.Name))
+				}
+
 				defaultBranch, err := d.ClientManager.GetDefaultBranch(ctx, repo.Owner.Login, repo.Name)
 				if err != nil {
 					errChan <- err
