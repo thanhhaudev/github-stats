@@ -5,6 +5,7 @@ import (
 	"math"
 	"strings"
 	"time"
+	"unicode/utf8"
 
 	"github.com/thanhhaudev/github-stats/pkg/github"
 	"github.com/thanhhaudev/github-stats/pkg/wakatime"
@@ -288,9 +289,9 @@ func formatData(v Data) string {
 
 	b.WriteString("\n")
 	b.WriteString(n)
-	b.WriteString(strings.Repeat(" ", nameLength-len(n)))
+	b.WriteString(strings.Repeat(" ", nameLength-utf8.RuneCountInString(n)))
 	b.WriteString(d)
-	b.WriteString(strings.Repeat(" ", descriptionLength-len(d)))
+	b.WriteString(strings.Repeat(" ", descriptionLength-utf8.RuneCountInString(d)))
 	b.WriteString(makeGraph(v.Percent))
 	b.WriteString("   ")
 	b.WriteString(formatPercent(v.Percent))
