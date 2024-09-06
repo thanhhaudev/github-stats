@@ -304,7 +304,7 @@ func formatPercent(p float64) string {
 }
 
 func truncateString(s string, l int) string {
-	if len(s) > l {
+	if utf8.RuneCountInString(s) > l {
 		return s[:l]
 	}
 
