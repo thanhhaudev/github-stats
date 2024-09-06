@@ -119,7 +119,7 @@ Use the `WAKATIME_DATA` environment variable to specify the data to show.
 + **OPERATING_SYSTEMS**: The operating systems you use.
   ```
   💻 Operating Systems:
-  Windows                  42 hrs 14 mins      █████████████████████████   70.00%
+  Windows                  42 hrs 14 mins      ████████████████████░░░░░   70.00%
   Mac                      12 hrs 10 mins      ███████░░░░░░░░░░░░░░░░░░   20.00%
   Linux                    6 hrs  3 mins       ████░░░░░░░░░░░░░░░░░░░░░   10.00%
   ```
