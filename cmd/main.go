@@ -40,36 +40,40 @@ func main() {
 		logger.Fatalln(err)
 	}
 
-	logger.Println("🔧 Setting up git config...")
-	err = setupGitConfig(
-		dc.Data.Viewer.Login,
-		os.Getenv("GITHUB_TOKEN"),
-		os.Getenv("COMMIT_USER_NAME"),
-		os.Getenv("COMMIT_USER_EMAIL"),
-	)
-	if err != nil {
-		logger.Fatalf("Error setting up git config: %v", err)
-	}
-
 	logger.Println("📝 Updating README.md...")
 	err = updateReadme(dc.GetStats(cl), os.Getenv("SECTION_NAME"))
 	if err != nil {
 		logger.Fatalf("Error updating README.md: %v", err)
 	}
 
-	changed, err := hasReadmeChanged()
-	if err != nil {
-		logger.Fatalf("Error checking if README.md has changed: %v", err)
-	}
-
-	if changed {
-		logger.Println("📤 Committing and pushing changes...")
-		err = commitAndPushReadme(os.Getenv("COMMIT_MESSAGE"), os.Getenv("BRANCH_NAME"))
+	if os.Getenv("DRY_RUN") != "true" {
+		logger.Println("🔧 Setting up git config...")
+		err = setupGitConfig(
+			dc.Data.Viewer.Login,
+			os.Getenv("GITHUB_TOKEN"),
+			os.Getenv("COMMIT_USER_NAME"),
+			os.Getenv("COMMIT_USER_EMAIL"),
+		)
 		if err != nil {
-			logger.Fatalf("Error committing and pushing changes: %v", err)
+			logger.Fatalf("Error setting up git config: %v", err)
+		}
+
+		changed, err := hasReadmeChanged()
+		if err != nil {
+			logger.Fatalf("Error checking if README.md has changed: %v", err)
+		}
+
+		if changed {
+			logger.Println("📤 Committing and pushing changes...")
+			err = commitAndPushReadme(os.Getenv("COMMIT_MESSAGE"), os.Getenv("BRANCH_NAME"))
+			if err != nil {
+				logger.Fatalf("Error committing and pushing changes: %v", err)
+			}
+		} else {
+			logger.Println("📤 No changes to commit")
 		}
 	} else {
-		logger.Println("📤 No changes to commit")
+		logger.Println("Skipping GitHub command functions in DRY_RUN mode")
 	}
 
 	logger.Printf("🚩 Execution Duration: %s\n", time.Since(start))
