@@ -262,7 +262,7 @@ func MakeLanguagePerRepoList(r []github.Repository) string {
 
 func makeList(d ...Data) string {
 	if len(d) == 0 {
-		return ""
+		return "\nNo data available\n"
 	}
 
 	var b strings.Builder
