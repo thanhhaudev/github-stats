@@ -124,12 +124,12 @@ Use the `WAKATIME_DATA` environment variable to specify the data to show.
   Linux                    6 hrs  3 mins       ████░░░░░░░░░░░░░░░░░░░░░   10.00%
   ```
 
-Use the `WAKATIME_RANGE` environment variable to specify the range for WakaTime statistics. You can choose from the following ranges and their corresponding tags:
-+ `last_7_days`: 📊 This Week
-+ `last_30_days`: 📊 This Month
-+ `last_6_months`: 📊 This Year
-+ `last_year`: 📊 Last Year
-+ `all_time`: 📊 All Time
+You can use the `WAKATIME_RANGE` environment variable to set the time range for WakaTime statistics. Each value will show a specific label as follows:
++ `last_7_days`: 📊 This Week I Spent My Time On
++ `last_30_days`: 📊 This Month I Spent My Time On
++ `last_6_months`: 📊 In the Last 6 Months I Spent My Time On
++ `last_year`: 📊 This Year I Spent My Time On
++ `all_time`: 📊 All The Time I Spent On
 
 
 ### Example Workflow
