@@ -70,7 +70,7 @@ func buildWakaData(i []wakatime.StatsItem) []Data {
 		otherData Data
 	)
 	for _, d := range i {
-		if d.Minutes < 10 && d.Hours == 0 {
+		if d.Minutes < 10 && d.Hours == 0 || d.Name == "Other" {
 			otherData.Percent += d.Percent
 			otherData.Hours += d.Hours
 			otherData.Minutes += d.Minutes
