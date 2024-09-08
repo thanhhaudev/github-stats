@@ -1,11 +1,13 @@
 package wakatime
 
+import "log"
+
 type WakaTime struct {
 	Stats *StatsService
 }
 
 // NewWakaTime creates a new WakaTime
-func NewWakaTime(apiKey string, statsRange StatsRange) *WakaTime {
+func NewWakaTime(logger *log.Logger, apiKey string, statsRange StatsRange) *WakaTime {
 	if apiKey == "" {
 		return nil
 	}
@@ -17,6 +19,6 @@ func NewWakaTime(apiKey string, statsRange StatsRange) *WakaTime {
 	client := NewClient(apiKey)
 
 	return &WakaTime{
-		Stats: &StatsService{client, statsRange},
+		Stats: &StatsService{client, logger, statsRange},
 	}
 }

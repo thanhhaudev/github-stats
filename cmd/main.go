@@ -30,11 +30,11 @@ func main() {
 
 	token := os.Getenv("GITHUB_TOKEN")
 	if token == "" {
-		logger.Fatalln("❌ GITHUB_TOKEN is required")
+		logger.Fatalln("❌ GITHUB_TOKEN is required for this action")
 	}
 
 	gc := github.NewGitHub(token)
-	wc := wakatime.NewWakaTime(os.Getenv("WAKATIME_API_KEY"), wakatime.StatsRange(os.Getenv("WAKATIME_RANGE")))
+	wc := wakatime.NewWakaTime(logger, os.Getenv("WAKATIME_API_KEY"), wakatime.StatsRange(os.Getenv("WAKATIME_RANGE")))
 	dc := container.NewDataContainer(logger, container.NewClientManager(wc, gc))
 	if err := dc.Build(ctx); err != nil {
 		logger.Fatalln(err)
@@ -70,7 +70,7 @@ func main() {
 				logger.Fatalf("Error committing and pushing changes: %v", err)
 			}
 		} else {
-			logger.Println("📤 No changes to commit")
+			logger.Println("📤 No changes to commit, skipping...")
 		}
 	} else {
 		logger.Println("Skipping GitHub command functions in DRY_RUN mode")
