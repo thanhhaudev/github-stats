@@ -180,5 +180,4 @@ jobs:
 ```
 
 ---
-#### Inspired From
-- [waka-readme-stats](https://github.com/anmol098/waka-readme-stats)
+> This project is inspired by [waka-readme-stats](https://github.com/anmol098/waka-readme-stats), which is a similar project that uses GitHub Actions to update your README with awesome metrics.
