@@ -8,7 +8,7 @@ import (
 	"net/http"
 )
 
-const ApiEndpoint = "https://api.github.com/graphql"
+const ApiEndpoint = "https://api.github.com"
 
 type Client struct {
 	token      string
@@ -42,13 +42,13 @@ func NewRequest(query string) *Request {
 	}
 }
 
-func (c *Client) Post(req *Request, v interface{}) error {
+func (c *Client) Post(req *Request, path string, v interface{}) error {
 	payload := new(bytes.Buffer)
 	if err := json.NewEncoder(payload).Encode(req); err != nil {
 		return err
 	}
 
-	httpReq, err := c.newRequest(http.MethodPost, c.origin, payload)
+	httpReq, err := c.newRequest(http.MethodPost, c.origin+path, payload)
 	if err != nil {
 		return err
 	}
@@ -57,20 +57,20 @@ func (c *Client) Post(req *Request, v interface{}) error {
 }
 
 // PostWithContext makes a POST request with a context
-func (c *Client) PostWithContext(ctx context.Context, req *Request, v interface{}) error {
+func (c *Client) PostWithContext(ctx context.Context, req *Request, path string, v interface{}) error {
 	// Check if the context is already canceled
 	select {
 	case <-ctx.Done():
 		return ctx.Err()
 	default:
 	}
-	
+
 	payload := new(bytes.Buffer)
 	if err := json.NewEncoder(payload).Encode(req); err != nil {
 		return err
 	}
 
-	httpReq, err := c.newRequest(http.MethodPost, c.origin, payload)
+	httpReq, err := c.newRequest(http.MethodPost, c.origin+path, payload)
 	if err != nil {
 		return err
 	}
