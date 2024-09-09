@@ -7,7 +7,7 @@ var Queries = map[string]string{
 	// $afterCursor: the cursor to start from
 	"repositories_contributed_to": `query ($username: String!, $numRepos: Int!, $afterCursor: String) {
 	  user(login: $username) {
-		repositoriesContributedTo(first: $numRepos, after: $afterCursor, orderBy: {field: CREATED_AT, direction: DESC}, includeUserRepositories: true) {
+		repositoriesContributedTo(first: $numRepos, after: $afterCursor, orderBy: {field: CREATED_AT, direction: DESC}, includeUserRepositories: false) {
 		  nodes {
 			name
 			url
