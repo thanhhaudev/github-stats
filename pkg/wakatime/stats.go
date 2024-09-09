@@ -2,12 +2,15 @@ package wakatime
 
 import (
 	"context"
+	"errors"
 	"fmt"
+	"log"
 )
 
 type StatsService struct {
 	*Client
-	Range StatsRange
+	Logger *log.Logger
+	Range  StatsRange
 }
 
 type StatsItem struct {
@@ -56,6 +59,13 @@ func (s *StatsService) Get(ctx context.Context) (*Stats, error) {
 
 	err := s.Client.GetWithContext(ctx, fmt.Sprintf("users/current/stats/%s", s.Range), nil, &stats)
 	if err != nil {
+		var wakaTimeErr *WakaTimeError
+		if errors.As(err, &wakaTimeErr) && wakaTimeErr.IsNotCompleted() {
+			s.Logger.Println("WakaTime processing has not completed yet, please retry after a few minutes")
+
+			return &stats, nil
+		}
+
 		return nil, err
 	}
 

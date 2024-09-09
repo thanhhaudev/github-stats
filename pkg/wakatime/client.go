@@ -41,6 +41,14 @@ func (c *Client) do(req *http.Request, v interface{}) error {
 
 	defer resp.Body.Close()
 
+	// ref: https://wakatime.com/developers
+	// 202 - Accepted: The request has been accepted for processing,
+	// but the processing has not been completed.
+	// The stats resource may return this code.
+	if resp.StatusCode == http.StatusAccepted {
+		return &WakaTimeError{StatusCode: resp.StatusCode, Message: "Accepted"}
+	}
+
 	if resp.StatusCode != http.StatusOK {
 		return fmt.Errorf("unexpected status code: %d", resp.StatusCode)
 	}

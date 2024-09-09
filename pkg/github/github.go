@@ -7,7 +7,7 @@ var Queries = map[string]string{
 	// $afterCursor: the cursor to start from
 	"repositories_contributed_to": `query ($username: String!, $numRepos: Int!, $afterCursor: String) {
 	  user(login: $username) {
-		repositoriesContributedTo(first: $numRepos, after: $afterCursor, orderBy: {field: CREATED_AT, direction: DESC}, includeUserRepositories: true) {
+		repositoriesContributedTo(first: $numRepos, after: $afterCursor, orderBy: {field: CREATED_AT, direction: DESC}, includeUserRepositories: false) {
 		  nodes {
 			name
 			url
@@ -18,6 +18,15 @@ var Queries = map[string]string{
 			}
             owner {
                 login
+            }
+            languages(first: 10) {
+                edges {
+                    node {
+                        name
+                        color
+                    }
+                    size
+                }
             }
 		  }
 		  pageInfo {
@@ -44,6 +53,15 @@ var Queries = map[string]string{
 				}
 				owner {
 					login
+				}
+				languages(first: 10) {
+					edges {
+						node {
+							name
+							color
+						}
+						size
+					}
 				}
 			}
 			pageInfo {
@@ -127,6 +145,11 @@ type GitHub struct {
 type PageInfo struct {
 	EndCursor   string `json:"endCursor"`
 	HasNextPage bool   `json:"hasNextPage"`
+}
+
+type Language struct {
+	Name  string `json:"name"`
+	Color string `json:"color"`
 }
 
 // NewGitHub creates a new GitHub

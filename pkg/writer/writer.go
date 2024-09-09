@@ -39,6 +39,22 @@ func (w WeekTime) String() string {
 	return longWeekTimeNames[w]
 }
 
+// MakeLanguageUsedList returns a list of languages used in repositories
+func MakeLanguageUsedList(l map[string][2]interface{}, totalSize int) string {
+	if len(l) == 0 {
+		return ""
+	}
+
+	res := strings.Builder{}
+	for k, v := range l {
+		c := v[0].(string)
+		s := v[1].(int)
+		res.WriteString(fmt.Sprintf("![%s](https://img.shields.io/badge/%s-%05.2f%%25-%s?&logo=%s&labelColor=000)\n", k, k, float64(s)/float64(totalSize)*100, c[1:], k))
+	}
+
+	return "**💬 Languages**\n\n" + res.String() + "\n\n"
+}
+
 // MakeWakaActivityList returns a list of activities
 func MakeWakaActivityList(s *wakatime.Stats, i []string) string {
 	if s == nil || len(i) == 0 {
@@ -70,7 +86,7 @@ func buildWakaData(i []wakatime.StatsItem) []Data {
 		otherData Data
 	)
 	for _, d := range i {
-		if d.Minutes < 10 && d.Hours == 0 {
+		if d.Minutes < 10 && d.Hours == 0 || d.Name == "Other" {
 			otherData.Percent += d.Percent
 			otherData.Hours += d.Hours
 			otherData.Minutes += d.Minutes
@@ -262,7 +278,7 @@ func MakeLanguagePerRepoList(r []github.Repository) string {
 
 func makeList(d ...Data) string {
 	if len(d) == 0 {
-		return ""
+		return "\nNo data available\n"
 	}
 
 	var b strings.Builder
@@ -304,7 +320,7 @@ func formatPercent(p float64) string {
 }
 
 func truncateString(s string, l int) string {
-	if len(s) > l {
+	if utf8.RuneCountInString(s) > l {
 		return s[:l]
 	}
 
