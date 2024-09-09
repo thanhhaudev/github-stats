@@ -19,6 +19,15 @@ var Queries = map[string]string{
             owner {
                 login
             }
+            languages(first: 10) {
+                edges {
+                    node {
+                        name
+                        color
+                    }
+                    size
+                }
+            }
 		  }
 		  pageInfo {
 			endCursor
@@ -44,6 +53,15 @@ var Queries = map[string]string{
 				}
 				owner {
 					login
+				}
+				languages(first: 10) {
+					edges {
+						node {
+							name
+							color
+						}
+						size
+					}
 				}
 			}
 			pageInfo {
@@ -127,6 +145,11 @@ type GitHub struct {
 type PageInfo struct {
 	EndCursor   string `json:"endCursor"`
 	HasNextPage bool   `json:"hasNextPage"`
+}
+
+type Language struct {
+	Name  string `json:"name"`
+	Color string `json:"color"`
 }
 
 // NewGitHub creates a new GitHub

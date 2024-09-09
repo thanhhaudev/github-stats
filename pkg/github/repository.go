@@ -20,6 +20,12 @@ type Repository struct {
 	Owner struct {
 		Login string `json:"login"`
 	} `json:"owner"`
+	Languages struct {
+		Edges []struct {
+			Node Language `json:"node"`
+			Size int      `json:"size"`
+		} `json:"edges"`
+	}
 }
 
 type Repositories struct {
@@ -37,7 +43,7 @@ func (r *RepositoryService) ContributedTo(ctx context.Context, request *Request)
 		} `json:"data"`
 	}
 
-	if err := r.Client.PostWithContext(ctx, request, &resp); err != nil {
+	if err := r.Client.PostWithContext(ctx, request, "/graphql", &resp); err != nil {
 		return nil, err
 	}
 
@@ -54,7 +60,7 @@ func (r *RepositoryService) Owned(ctx context.Context, request *Request) (*Repos
 		} `json:"data"`
 	}
 
-	if err := r.Client.PostWithContext(ctx, request, &resp); err != nil {
+	if err := r.Client.PostWithContext(ctx, request, "/graphql", &resp); err != nil {
 		return nil, err
 	}
 
@@ -87,7 +93,7 @@ func (r *RepositoryService) Commits(ctx context.Context, request *Request) (*Com
 		} `json:"data"`
 	}
 
-	if err := r.Client.PostWithContext(ctx, request, &resp); err != nil {
+	if err := r.Client.PostWithContext(ctx, request, "/graphql", &resp); err != nil {
 		return nil, err
 	}
 
@@ -113,7 +119,7 @@ func (r *RepositoryService) Branches(ctx context.Context, request *Request) (*Br
 		} `json:"data"`
 	}
 
-	if err := r.Client.PostWithContext(ctx, request, &resp); err != nil {
+	if err := r.Client.PostWithContext(ctx, request, "/graphql", &resp); err != nil {
 		return nil, err
 	}
 
@@ -130,7 +136,7 @@ func (r *RepositoryService) DefaultBranch(ctx context.Context, request *Request)
 		} `json:"data"`
 	}
 
-	if err := r.Client.PostWithContext(ctx, request, &resp); err != nil {
+	if err := r.Client.PostWithContext(ctx, request, "/graphql", &resp); err != nil {
 		return nil, err
 	}
 

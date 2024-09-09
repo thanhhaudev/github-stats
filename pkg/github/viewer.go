@@ -24,7 +24,7 @@ func (v *ViewerService) Get(ctx context.Context, request *Request) (*Viewer, err
 		} `json:"data"`
 	}
 
-	if err := v.Client.PostWithContext(ctx, request, &resp); err != nil {
+	if err := v.Client.PostWithContext(ctx, request, "/graphql", &resp); err != nil {
 		return nil, err
 	}
 
