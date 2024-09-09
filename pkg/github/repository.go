@@ -20,6 +20,12 @@ type Repository struct {
 	Owner struct {
 		Login string `json:"login"`
 	} `json:"owner"`
+	Languages struct {
+		Edges []struct {
+			Node Language `json:"node"`
+			Size int      `json:"size"`
+		} `json:"edges"`
+	}
 }
 
 type Repositories struct {

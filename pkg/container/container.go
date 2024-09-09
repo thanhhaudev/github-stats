@@ -31,11 +31,12 @@ type DataContainer struct {
 }
 
 // metrics returns the metrics map
-func (d *DataContainer) metrics(com *CommitStats) map[string]string {
+func (d *DataContainer) metrics(com *CommitStats, lang *LanguageStats) map[string]string {
 	return map[string]string{
-		"LANGUAGE_PER_REPO":   writer.MakeLanguagePerRepoList(d.Data.Repositories),
-		"COMMIT_DAYS_OF_WEEK": writer.MakeCommitDaysOfWeekList(com.DailyCommits, com.TotalCommits),
-		"COMMIT_TIME_OF_DAY":  writer.MakeCommitTimeOfDayList(d.Data.Commits),
+		"LANGUAGE_PER_REPO":       writer.MakeLanguagePerRepoList(d.Data.Repositories),
+		"LANGUAGES_BASED_ON_REPO": writer.MakeLanguageUsedList(lang.Languages, lang.TotalSize),
+		"COMMIT_DAYS_OF_WEEK":     writer.MakeCommitDaysOfWeekList(com.DailyCommits, com.TotalCommits),
+		"COMMIT_TIME_OF_DAY":      writer.MakeCommitTimeOfDayList(d.Data.Commits),
 		"WAKATIME_SPENT_TIME": writer.MakeWakaActivityList(
 			d.Data.WakaTime,
 			strings.Split(os.Getenv("WAKATIME_DATA"), ","),
@@ -49,7 +50,7 @@ func (d *DataContainer) GetStats(cl clock.Clock) string {
 	b := strings.Builder{}
 
 	// show metrics based on the environment variable
-	w := d.metrics(d.CalculateCommits())
+	w := d.metrics(d.CalculateCommits(), d.CalculateLanguages())
 	for _, k := range strings.Split(os.Getenv("SHOW_METRICS"), ",") {
 		v, ok := w[k]
 		if !ok {
