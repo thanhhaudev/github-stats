@@ -262,9 +262,16 @@ func (d *DataContainer) InitWakaStats(ctx context.Context) error {
 		return err
 	}
 
+	// if the status is not "ok", print the message
 	if v.Data.Status != "ok" {
-		d.Logger.Println("WakaTime data is not available")
-		return nil
+		switch v.Data.Status {
+		case "pending_update":
+			d.Logger.Println("WakaTime is not ready yet")
+		default:
+			d.Logger.Println("An error occurred while fetching WakaTime data:", v.Data.Status)
+
+			return nil // Skip if the status is unknown
+		}
 	}
 
 	d.Data.WakaTime = v
