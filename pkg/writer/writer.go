@@ -3,6 +3,7 @@ package writer
 import (
 	"fmt"
 	"math"
+	"sort"
 	"strings"
 	"time"
 	"unicode/utf8"
@@ -45,11 +46,17 @@ func MakeLanguageUsedList(l map[string][2]interface{}, totalSize int) string {
 		return ""
 	}
 
+	// Create a map to store the sizes for sorting
+	sizeMap := make(map[string]int)
+	for key, value := range l {
+		sizeMap[key] = value[1].(int)
+	}
+
 	res := strings.Builder{}
-	for k, v := range l {
-		c := v[0].(string)
-		s := v[1].(int)
-		res.WriteString(fmt.Sprintf("![%s](https://img.shields.io/badge/%s-%05.2f%%25-%s?&logo=%s&labelColor=000)\n", k, k, float64(s)/float64(totalSize)*100, c[1:], k))
+	for _, k := range sortMapByValue(sizeMap) {
+		c := l[k][0].(string)
+		s := l[k][1].(int)
+		res.WriteString(fmt.Sprintf("![%s](https://img.shields.io/badge/%s-%05.2f%%25-%s?&logo=%s&labelColor=151b23)\n", k, k, float64(s)/float64(totalSize)*100, c[1:], k))
 	}
 
 	return "**💬 Languages**\n\n" + res.String() + "\n\n"
@@ -254,7 +261,8 @@ func MakeLanguagePerRepoList(r []github.Repository) string {
 	}
 
 	// Create a list of Data structs
-	for name, num := range repos {
+	for _, name := range sortMapByValue(repos) {
+		num := repos[name]
 		if num > topNum { // find top language
 			topNum = num
 			topName = name
@@ -266,7 +274,6 @@ func MakeLanguagePerRepoList(r []github.Repository) string {
 				if num > 1 {
 					return "repos"
 				}
-
 				return "repo"
 			}()),
 			Percent: float64(num) / count * 100,
@@ -363,4 +370,18 @@ func formatTime(hours, minutes int) string {
 	}
 
 	return strings.TrimSpace(result)
+}
+
+// sortMapByValue sorts a map by its values in descending order
+func sortMapByValue(m map[string]int) []string {
+	keys := make([]string, 0, len(m))
+	for key := range m {
+		keys = append(keys, key)
+	}
+
+	sort.Slice(keys, func(i, j int) bool {
+		return m[keys[i]] > m[keys[j]]
+	})
+
+	return keys
 }
