@@ -3,6 +3,7 @@ package writer
 import (
 	"fmt"
 	"math"
+	"os"
 	"sort"
 	"strings"
 	"time"
@@ -288,9 +289,13 @@ func makeList(d ...Data) string {
 		return "\nNo data available\n"
 	}
 
-	var b strings.Builder
-	for _, v := range d {
-		b.WriteString(formatData(v))
+	var (
+		b   strings.Builder
+		ver = os.Getenv("PROGRESS_BAR_VERSION")
+	)
+
+	for _, val := range d {
+		b.WriteString(formatData(val, ver))
 	}
 
 	b.WriteString("\n")
@@ -298,26 +303,53 @@ func makeList(d ...Data) string {
 	return b.String()
 }
 
-func makeGraph(p float64) string {
-	d, e, q := "█", "░", math.Round(p/(100/graphLength))
+func makeProgressBar(p float64) string {
+	filledChar := "█"
+	emptyChar := "░"
 
-	return strings.Repeat(d, int(q)) + strings.Repeat(e, graphLength-int(q))
+	filledLength := int(math.Round(p / (100 / graphLength)))
+	emptyLength := graphLength - filledLength
+
+	return strings.Repeat(filledChar, filledLength) + strings.Repeat(emptyChar, emptyLength)
 }
 
-func formatData(v Data) string {
+func makeProgressBarV2(p float64) string {
+	filledChar := "🟩"
+	halfFilledChar := "🟨"
+	emptyChar := "⬜"
+
+	percentagePerBlock := float64(100 / graphLength)
+	filledLength := int(math.Floor(p / percentagePerBlock))
+	remainingPercentage := p - (float64(filledLength) * percentagePerBlock)
+	halfFilledLength := 0
+	if remainingPercentage > 0 {
+		halfFilledLength = 1
+	}
+	emptyLength := graphLength - filledLength - halfFilledLength
+
+	return strings.Repeat(filledChar, filledLength) + strings.Repeat(halfFilledChar, halfFilledLength) + strings.Repeat(emptyChar, emptyLength)
+}
+
+func formatData(data Data, version string) string {
 	var b strings.Builder
 
-	n := truncateString(v.Name, nameLength)
-	d := truncateString(v.Description, descriptionLength)
+	n := truncateString(data.Name, nameLength)
+	d := truncateString(data.Description, descriptionLength)
 
 	b.WriteString("\n")
 	b.WriteString(n)
 	b.WriteString(strings.Repeat(" ", nameLength-utf8.RuneCountInString(n)))
 	b.WriteString(d)
 	b.WriteString(strings.Repeat(" ", descriptionLength-utf8.RuneCountInString(d)))
-	b.WriteString(makeGraph(v.Percent))
+
+	if version == "2" {
+		b.WriteString(makeProgressBarV2(data.Percent))
+	} else {
+		b.WriteString(makeProgressBar(data.Percent))
+	}
+
 	b.WriteString("   ")
-	b.WriteString(formatPercent(v.Percent))
+	b.WriteString(formatPercent(data.Percent))
 
 	return b.String()
 }
