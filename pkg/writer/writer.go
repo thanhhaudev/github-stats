@@ -3,6 +3,8 @@ package writer
 import (
 	"fmt"
 	"math"
+	"os"
+	"sort"
 	"strings"
 	"time"
 	"unicode/utf8"
@@ -45,11 +47,17 @@ func MakeLanguageUsedList(l map[string][2]interface{}, totalSize int) string {
 		return ""
 	}
 
+	// Create a map to store the sizes for sorting
+	sizeMap := make(map[string]int)
+	for key, value := range l {
+		sizeMap[key] = value[1].(int)
+	}
+
 	res := strings.Builder{}
-	for k, v := range l {
-		c := v[0].(string)
-		s := v[1].(int)
-		res.WriteString(fmt.Sprintf("![%s](https://img.shields.io/badge/%s-%05.2f%%25-%s?&logo=%s&labelColor=000)\n", k, k, float64(s)/float64(totalSize)*100, c[1:], k))
+	for _, k := range sortMapByValue(sizeMap) {
+		c := l[k][0].(string)
+		s := l[k][1].(int)
+		res.WriteString(fmt.Sprintf("![%s](https://img.shields.io/badge/%s-%05.2f%%25-%s?&logo=%s&labelColor=151b23)\n", k, k, float64(s)/float64(totalSize)*100, c[1:], k))
 	}
 
 	return "**💬 Languages**\n\n" + res.String() + "\n\n"
@@ -254,7 +262,8 @@ func MakeLanguagePerRepoList(r []github.Repository) string {
 	}
 
 	// Create a list of Data structs
-	for name, num := range repos {
+	for _, name := range sortMapByValue(repos) {
+		num := repos[name]
 		if num > topNum { // find top language
 			topNum = num
 			topName = name
@@ -266,7 +275,6 @@ func MakeLanguagePerRepoList(r []github.Repository) string {
 				if num > 1 {
 					return "repos"
 				}
-
 				return "repo"
 			}()),
 			Percent: float64(num) / count * 100,
@@ -281,9 +289,13 @@ func makeList(d ...Data) string {
 		return "\nNo data available\n"
 	}
 
-	var b strings.Builder
-	for _, v := range d {
-		b.WriteString(formatData(v))
+	var (
+		b   strings.Builder
+		ver = os.Getenv("PROGRESS_BAR_VERSION")
+	)
+
+	for _, val := range d {
+		b.WriteString(formatData(val, ver))
 	}
 
 	b.WriteString("\n")
@@ -291,26 +303,53 @@ func makeList(d ...Data) string {
 	return b.String()
 }
 
-func makeGraph(p float64) string {
-	d, e, q := "█", "░", math.Round(p/(100/graphLength))
+func makeProgressBar(p float64) string {
+	filledChar := "█"
+	emptyChar := "░"
 
-	return strings.Repeat(d, int(q)) + strings.Repeat(e, graphLength-int(q))
+	filledLength := int(math.Round(p / (100 / graphLength)))
+	emptyLength := graphLength - filledLength
+
+	return strings.Repeat(filledChar, filledLength) + strings.Repeat(emptyChar, emptyLength)
 }
 
-func formatData(v Data) string {
+func makeProgressBarV2(p float64) string {
+	filledChar := "🟩"
+	halfFilledChar := "🟨"
+	emptyChar := "⬜"
+
+	percentagePerBlock := float64(100 / graphLength)
+	filledLength := int(math.Floor(p / percentagePerBlock))
+	remainingPercentage := p - (float64(filledLength) * percentagePerBlock)
+	halfFilledLength := 0
+	if remainingPercentage > 0 {
+		halfFilledLength = 1
+	}
+	emptyLength := graphLength - filledLength - halfFilledLength
+
+	return strings.Repeat(filledChar, filledLength) + strings.Repeat(halfFilledChar, halfFilledLength) + strings.Repeat(emptyChar, emptyLength)
+}
+
+func formatData(data Data, version string) string {
 	var b strings.Builder
 
-	n := truncateString(v.Name, nameLength)
-	d := truncateString(v.Description, descriptionLength)
+	n := truncateString(data.Name, nameLength)
+	d := truncateString(data.Description, descriptionLength)
 
 	b.WriteString("\n")
 	b.WriteString(n)
 	b.WriteString(strings.Repeat(" ", nameLength-utf8.RuneCountInString(n)))
 	b.WriteString(d)
 	b.WriteString(strings.Repeat(" ", descriptionLength-utf8.RuneCountInString(d)))
-	b.WriteString(makeGraph(v.Percent))
+
+	if version == "2" {
+		b.WriteString(makeProgressBarV2(data.Percent))
+	} else {
+		b.WriteString(makeProgressBar(data.Percent))
+	}
+
 	b.WriteString("   ")
-	b.WriteString(formatPercent(v.Percent))
+	b.WriteString(formatPercent(data.Percent))
 
 	return b.String()
 }
@@ -363,4 +402,18 @@ func formatTime(hours, minutes int) string {
 	}
 
 	return strings.TrimSpace(result)
+}
+
+// sortMapByValue sorts a map by its values in descending order
+func sortMapByValue(m map[string]int) []string {
+	keys := make([]string, 0, len(m))
+	for key := range m {
+		keys = append(keys, key)
+	}
+
+	sort.Slice(keys, func(i, j int) bool {
+		return m[keys[i]] > m[keys[j]]
+	})
+
+	return keys
 }
