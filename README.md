@@ -34,23 +34,23 @@ This GitHub Action collects your GitHub data and coding activity from WakaTime. 
 ## Usage
 
 ### Environment Variables
-| Name                      | Description                                                                                                                                                                                      | Required                          | Default                   |
-|---------------------------|--------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------|-----------------------------------|---------------------------|
-| `GITHUB_TOKEN`            | The GitHub token to authenticate API requests.                                                                                                                                                   | Yes                               | -                         |
-| `SHOW_METRICS`            | The metrics to show in the `README.md` file.                                                                                                                                                     | Yes                               | -                         |
-| `WAKATIME_API_KEY`        | The WakaTime API key to fetch coding activity statistics.                                                                                                                                        | No                                | -                         |
-| `WAKATIME_RANGE`          | The range for WakaTime statistics (e.g., `last_7_days`, `last_30_days`, `last_6_months`, `last_year`, `all_time`).                                                                               | No                                | last_7_days               |
-| `WAKATIME_DATA`           | The data to show from WakaTime statistics.                                                                                                                                                       | If `WAKATIME_API_KEY` is provided | -                         |
-| `TIME_ZONE`               | The timezone to use for statistics.                                                                                                                                                              | No                                | UTC                       |
-| `TIME_LAYOUT`             | The layout of the time to show in the last update time.                                                                                                                                          | No                                | 2006-01-02 15:04:05 -0700 |
-| `SHOW_LAST_UPDATE`        | Whether to show the last update time in the `README.md` file.                                                                                                                                    | No                                | -                         |
-| `ONLY_MAIN_BRANCH`        | Whether to fetch data only from the main branch. If you don’t set this, it will search for commits in all branches of the repository to count the number of commits, which might take more time. | No                                | -                         |
-| `COMMIT_MESSAGE`          | The commit message to use when updating the `README.md`.                                                                                                                                         | No                                | 📝 Update README.md       |
-| `COMMIT_USER_NAME`        | The name to use for the commit.                                                                                                                                                                  | No                                | GitHub Action             |
-| `COMMIT_USER_EMAIL`       | The email to use for the commit.                                                                                                                                                                 | No                                | action@github.com         |
-| `SECTION_NAME`            | The section name in the `README.md` to update.                                                                                                                                                   | No                                | readme-stats              |
-| `HIDE_REPO_INFO`          | Whether to hide the repository information in action logs.                                                                                                                                       | No                                | -                         |
-
+| Name                   | Description                                                                                                                                                                                      | Required                          | Default                   |
+|------------------------|--------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------|-----------------------------------|---------------------------|
+| `GITHUB_TOKEN`         | The GitHub token to authenticate API requests.                                                                                                                                                   | Yes                               | -                         |
+| `SHOW_METRICS`         | The metrics to show in the `README.md` file.                                                                                                                                                     | Yes                               | -                         |
+| `WAKATIME_API_KEY`     | The WakaTime API key to fetch coding activity statistics.                                                                                                                                        | No                                | -                         |
+| `WAKATIME_RANGE`       | The range for WakaTime statistics (e.g., `last_7_days`, `last_30_days`, `last_6_months`, `last_year`, `all_time`).                                                                               | No                                | last_7_days               |
+| `WAKATIME_DATA`        | The data to show from WakaTime statistics.                                                                                                                                                       | If `WAKATIME_API_KEY` is provided | -                         |
+| `TIME_ZONE`            | The timezone to use for statistics.                                                                                                                                                              | No                                | UTC                       |
+| `TIME_LAYOUT`          | The layout of the time to show in the last update time.                                                                                                                                          | No                                | 2006-01-02 15:04:05 -0700 |
+| `SHOW_LAST_UPDATE`     | Whether to show the last update time in the `README.md` file.                                                                                                                                    | No                                | -                         |
+| `ONLY_MAIN_BRANCH`     | Whether to fetch data only from the main branch. If you don’t set this, it will search for commits in all branches of the repository to count the number of commits, which might take more time. | No                                | -                         |
+| `COMMIT_MESSAGE`       | The commit message to use when updating the `README.md`.                                                                                                                                         | No                                | 📝 Update README.md       |
+| `COMMIT_USER_NAME`     | The name to use for the commit.                                                                                                                                                                  | No                                | GitHub Action             |
+| `COMMIT_USER_EMAIL`    | The email to use for the commit.                                                                                                                                                                 | No                                | action@github.com         |
+| `SECTION_NAME`         | The section name in the `README.md` to update.                                                                                                                                                   | No                                | readme-stats              |
+| `HIDE_REPO_INFO`       | Whether to hide the repository information in action logs.                                                                                                                                       | No                                | -                         |
+| `PROGRESS_BAR_VERSION` | The version of the progress bar to use.                                                                                                                                                          | No                                | 1                         |
 ### Metrics
 The `SHOW_METRICS` environment variable is used to specify the metrics to show in the `README.md` file. You can choose from the following metrics:
 
@@ -89,17 +89,16 @@ The `SHOW_METRICS` environment variable is used to specify the metrics to show i
 
    **💬 Languages** 
 
-![JavaScript](https://img.shields.io/badge/JavaScript-67.8%25-f1e05a?&logo=JavaScript&labelColor=000)
-![Python](https://img.shields.io/badge/Python-44.1%25-3572A5?&logo=Python&labelColor=000)
-![Java](https://img.shields.io/badge/Java-40.2%25-b07219?&logo=Java&labelColor=000)
-![C#](https://img.shields.io/badge/C%23-31.4%25-178600?&logo=CSharp&labelColor=000)
-![PHP](https://img.shields.io/badge/PHP-26.2%25-4F5D95?&logo=PHP&labelColor=000)
-![C++](https://img.shields.io/badge/C++-23.5%25-00599C?&logo=Cplusplus&labelColor=000)
-![TypeScript](https://img.shields.io/badge/TypeScript-21.2%25-3178C6?&logo=TypeScript&labelColor=000)
-![Ruby](https://img.shields.io/badge/Ruby-10.5%25-701516?&logo=Ruby&labelColor=000)
-![Swift](https://img.shields.io/badge/Swift-8.9%25-FA7343?&logo=Swift&labelColor=000)
-![Go](https://img.shields.io/badge/Go-7.3%25-00ADD8?&logo=Go&labelColor=000)
-
+![JavaScript](https://img.shields.io/badge/JavaScript-20.0%25-f1e05a?&logo=JavaScript&labelColor=151b23)
+![Python](https://img.shields.io/badge/Python-13.0%25-3572A5?&logo=Python&labelColor=151b23)
+![Java](https://img.shields.io/badge/Java-12.0%25-b07219?&logo=Java&labelColor=151b23)
+![C#](https://img.shields.io/badge/C%23-9.4%25-178600?&logo=CSharp&labelColor=151b23)
+![PHP](https://img.shields.io/badge/PHP-7.8%25-4F5D95?&logo=PHP&labelColor=151b23)
+![C++](https://img.shields.io/badge/C++-7.0%25-00599C?&logo=Cplusplus&labelColor=151b23)
+![TypeScript](https://img.shields.io/badge/TypeScript-6.3%25-3178C6?&logo=TypeScript&labelColor=151b23)
+![Ruby](https://img.shields.io/badge/Ruby-3.1%25-701516?&logo=Ruby&labelColor=151b23)
+![Swift](https://img.shields.io/badge/Swift-2.6%25-FA7343?&logo=Swift&labelColor=151b23)
+![Go](https://img.shields.io/badge/Go-2.8%25-00ADD8?&logo=Go&labelColor=151b23)
 
 **WAKATIME_SPENT_TIME**: The time you spent coding on WakaTime. 
 
@@ -148,6 +147,17 @@ You can use the `WAKATIME_RANGE` environment variable to set the time range for 
 + `all_time`: 📊 All The Time I Spent On
 
 **Note**: If you don't provide the `WAKATIME_API_KEY`, the `WAKATIME_SPENT_TIME` metric will not be shown.
+
+### Progress Bar Versions
+You can use the `PROGRESS_BAR_VERSION` environment variable to specify the version of the progress bar to use. The available versions are:
++ `1`: **Default Progress Bar**: Uses the default progress bar style.
+```
+████░░░░░░░░░░░░░░░░░░░░░
+```
++ `2` **Square Symbol Progress Bar**: Uses the square symbol for the progress bar. This version also shows the half block (the remaining percentage is not enough to fill a whole block) for the progress bar.
+```
+🟩🟩🟩🟩🟩🟩🟩🟩🟨⬜⬜⬜⬜⬜⬜⬜⬜⬜⬜⬜⬜⬜⬜⬜⬜
+```
 
 ### Example Workflow
 
