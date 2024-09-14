@@ -44,6 +44,9 @@ inputs:
   LANGUAGES_BASED_ON_REPO:
     description: 'Languages based on repository'
     required: false
+  EXCLUDE_FORK_REPOS:
+    description: 'Exclude fork repositories'
+    required: false
 runs:
   using: docker
   image: Dockerfile

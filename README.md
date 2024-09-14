@@ -51,6 +51,8 @@ This GitHub Action collects your GitHub data and coding activity from WakaTime. 
 | `SECTION_NAME`         | The section name in the `README.md` to update.                                                                                                                                                   | No                                | readme-stats              |
 | `HIDE_REPO_INFO`       | Whether to hide the repository information in action logs.                                                                                                                                       | No                                | -                         |
 | `PROGRESS_BAR_VERSION` | The version of the progress bar to use.                                                                                                                                                          | No                                | 1                         |
+| `EXCLUDE_FORK_REPOS`   | Whether to exclude fork repositories from the metrics.                                                                                                                                           | No                                | -                         |
+
 ### Metrics
 The `SHOW_METRICS` environment variable is used to specify the metrics to show in the `README.md` file. You can choose from the following metrics:
 
