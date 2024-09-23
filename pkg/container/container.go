@@ -33,10 +33,10 @@ type DataContainer struct {
 // metrics returns the metrics map
 func (d *DataContainer) metrics(com *CommitStats, lang *LanguageStats) map[string]string {
 	return map[string]string{
-		"LANGUAGE_PER_REPO":       writer.MakeLanguagePerRepoList(d.Data.Repositories),
-		"LANGUAGES_BASED_ON_REPO": writer.MakeLanguageUsedList(lang.Languages, lang.TotalSize),
-		"COMMIT_DAYS_OF_WEEK":     writer.MakeCommitDaysOfWeekList(com.DailyCommits, com.TotalCommits),
-		"COMMIT_TIME_OF_DAY":      writer.MakeCommitTimeOfDayList(d.Data.Commits),
+		"LANGUAGE_PER_REPO":   writer.MakeLanguagePerRepoList(d.Data.Repositories),
+		"LANGUAGES_AND_TOOLS": writer.MakeLanguageAndToolList(lang.Languages, lang.TotalSize),
+		"COMMIT_DAYS_OF_WEEK": writer.MakeCommitDaysOfWeekList(com.DailyCommits, com.TotalCommits),
+		"COMMIT_TIME_OF_DAY":  writer.MakeCommitTimeOfDayList(d.Data.Commits),
 		"WAKATIME_SPENT_TIME": writer.MakeWakaActivityList(
 			d.Data.WakaTime,
 			strings.Split(os.Getenv("WAKATIME_DATA"), ","),

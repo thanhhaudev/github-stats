@@ -41,8 +41,8 @@ inputs:
   COMMIT_USER_EMAIL:
     description: 'Commit user email'
     required: false
-  LANGUAGES_BASED_ON_REPO:
-    description: 'Languages based on repository'
+  LANGUAGES_AND_TOOLS:
+    description: 'Languages and tools used in the repositories'
     required: false
   EXCLUDE_FORK_REPOS:
     description: 'Exclude fork repositories'
