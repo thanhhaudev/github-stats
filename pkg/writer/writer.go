@@ -41,8 +41,8 @@ func (w WeekTime) String() string {
 	return longWeekTimeNames[w]
 }
 
-// MakeLanguageUsedList returns a list of languages used in repositories
-func MakeLanguageUsedList(l map[string][2]interface{}, totalSize int) string {
+// MakeLanguageAndToolList returns a list of languages and tools used in the repositories
+func MakeLanguageAndToolList(l map[string][2]interface{}, totalSize int) string {
 	if len(l) == 0 {
 		return ""
 	}
@@ -60,7 +60,7 @@ func MakeLanguageUsedList(l map[string][2]interface{}, totalSize int) string {
 		res.WriteString(fmt.Sprintf("![%s](https://img.shields.io/badge/%s-%05.2f%%25-%s?&logo=%s&labelColor=151b23)\n", k, k, float64(s)/float64(totalSize)*100, c[1:], k))
 	}
 
-	return "**💬 Languages**\n\n" + res.String() + "\n\n"
+	return "**💬 Languages & Tools**\n\n" + res.String() + "\n\n"
 }
 
 // MakeWakaActivityList returns a list of activities
