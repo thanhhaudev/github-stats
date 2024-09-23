@@ -88,6 +88,10 @@ func (d *DataContainer) InitViewer(ctx context.Context) error {
 		return err
 	}
 
+	if v == nil {
+		return fmt.Errorf("❌ could not fetch viewer information, please check your GitHub token")
+	}
+
 	d.Data.Viewer = v
 
 	return nil
