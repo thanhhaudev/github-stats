@@ -33,10 +33,10 @@ type DataContainer struct {
 // metrics returns the metrics map
 func (d *DataContainer) metrics(com *CommitStats, lang *LanguageStats) map[string]string {
 	return map[string]string{
-		"LANGUAGE_PER_REPO":       writer.MakeLanguagePerRepoList(d.Data.Repositories),
-		"LANGUAGES_BASED_ON_REPO": writer.MakeLanguageUsedList(lang.Languages, lang.TotalSize),
-		"COMMIT_DAYS_OF_WEEK":     writer.MakeCommitDaysOfWeekList(com.DailyCommits, com.TotalCommits),
-		"COMMIT_TIME_OF_DAY":      writer.MakeCommitTimeOfDayList(d.Data.Commits),
+		"LANGUAGE_PER_REPO":   writer.MakeLanguagePerRepoList(d.Data.Repositories),
+		"LANGUAGES_AND_TOOLS": writer.MakeLanguageAndToolList(lang.Languages, lang.TotalSize),
+		"COMMIT_DAYS_OF_WEEK": writer.MakeCommitDaysOfWeekList(com.DailyCommits, com.TotalCommits),
+		"COMMIT_TIME_OF_DAY":  writer.MakeCommitTimeOfDayList(d.Data.Commits),
 		"WAKATIME_SPENT_TIME": writer.MakeWakaActivityList(
 			d.Data.WakaTime,
 			strings.Split(os.Getenv("WAKATIME_DATA"), ","),
@@ -100,6 +100,7 @@ func (d *DataContainer) InitRepositories(ctx context.Context) error {
 	seenRepos := make(map[string]bool)
 	errChan := make(chan error, 2)
 	repoChan := make(chan []github.Repository, 2)
+	isExcludeForks := os.Getenv("EXCLUDE_FORK_REPOS") == "true"
 
 	go func() {
 		r, err := d.ClientManager.GetOwnedRepositories(ctx, d.Data.Viewer.Login, repoPerQuery)
@@ -138,6 +139,10 @@ func (d *DataContainer) InitRepositories(ctx context.Context) error {
 	// Deduplicate repositories
 	for repos := range repoChan {
 		for _, repo := range repos {
+			if isExcludeForks && repo.IsFork {
+				continue
+			}
+
 			if !seenRepos[repo.Url] {
 				seenRepos[repo.Url] = true
 				d.Data.Repositories = append(d.Data.Repositories, repo)

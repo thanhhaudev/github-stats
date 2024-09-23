@@ -51,6 +51,9 @@ This GitHub Action collects your GitHub data and coding activity from WakaTime. 
 | `SECTION_NAME`         | The section name in the `README.md` to update.                                                                                                                                                   | No                                | readme-stats              |
 | `HIDE_REPO_INFO`       | Whether to hide the repository information in action logs.                                                                                                                                       | No                                | -                         |
 | `PROGRESS_BAR_VERSION` | The version of the progress bar to use.                                                                                                                                                          | No                                | 1                         |
+| `EXCLUDE_FORK_REPOS`   | Whether to exclude fork repositories from the metrics.                                                                                                                                           | No                                | -                         |
+| `LANGUAGES_AND_TOOLS`  | The languages and tools that you used in your repositories.                                                                                                                                      | No                                | -                         |
+
 ### Metrics
 The `SHOW_METRICS` environment variable is used to specify the metrics to show in the `README.md` file. You can choose from the following metrics:
 
@@ -85,9 +88,9 @@ The `SHOW_METRICS` environment variable is used to specify the metrics to show i
    TypeScript               1 repo              ████░░░░░░░░░░░░░░░░░░░░░   14.29%
    ```
 
-**LANGUAGES_BASED_ON_REPO**: The languages you use in each repository. Percentage is based on the total bytes of code in each language.
+**LANGUAGES_AND_TOOLS**: The languages and tools you used on your projects.
 
-   **💬 Languages** 
+   **💬 Languages & Tools** 
 
 ![JavaScript](https://img.shields.io/badge/JavaScript-20.0%25-f1e05a?&logo=JavaScript&labelColor=151b23)
 ![Python](https://img.shields.io/badge/Python-13.0%25-3572A5?&logo=Python&labelColor=151b23)
