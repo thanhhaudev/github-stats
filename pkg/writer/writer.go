@@ -126,7 +126,7 @@ func buildWakaData(i []wakatime.StatsItem) []Data {
 
 // MakeLastUpdatedOn returns a string with the last updated time
 func MakeLastUpdatedOn(t string) string {
-	return fmt.Sprintf("\n\n*⏳ Last updated on %s*", t)
+	return fmt.Sprintf("\n\n⏳ *Last updated on %s*", t)
 }
 
 // MakeCommitTimeOfDayList returns a list of commits made during different times of the day
