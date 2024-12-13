@@ -57,7 +57,7 @@ This GitHub Action collects your GitHub data and coding activity from WakaTime. 
 ### Metrics
 The `SHOW_METRICS` environment variable is used to specify the metrics to show in the `README.md` file. You can choose from the following metrics:
 
-**COMMIT_TIME_OF_DAY**: The time of day you make commits.
+**COMMIT_TIMES_OF_DAY**: The time of day you make commits.
 
    **🕒 I'm An Afternoon Warrior 🥷🏻**
    ```
@@ -187,7 +187,7 @@ jobs:
           GITHUB_TOKEN: ${{ secrets.GH_TOKEN }} # GitHub token, required
           WAKATIME_API_KEY: ${{ secrets.WAKATIME_API_KEY }}
           WAKATIME_DATA: "EDITORS,LANGUAGES,PROJECTS,OPERATING_SYSTEMS" # show data, separated by comma
-          SHOW_METRICS: "COMMIT_TIME_OF_DAY,LANGUAGE_PER_REPO,COMMIT_DAYS_OF_WEEK,WAKATIME_SPENT_TIME" # show metrics, separated by comma
+          SHOW_METRICS: "COMMIT_TIMES_OF_DAY,LANGUAGE_PER_REPO,COMMIT_DAYS_OF_WEEK,WAKATIME_SPENT_TIME" # show metrics, separated by comma
           SHOW_LAST_UPDATE: "true" # show last update time
           ONLY_MAIN_BRANCH: "true" # only fetch data from the main branch
 ```

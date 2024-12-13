@@ -129,8 +129,8 @@ func MakeLastUpdatedOn(t string) string {
 	return fmt.Sprintf("\n\n*⏳ Last updated on %s*", t)
 }
 
-// MakeCommitTimeOfDayList returns a list of commits made during different times of the day
-func MakeCommitTimeOfDayList(commits []github.Commit) string {
+// MakeCommitTimesOfDayList returns a list of commits made during different times of the day
+func MakeCommitTimesOfDayList(commits []github.Commit) string {
 	if len(commits) == 0 {
 		return ""
 	}
