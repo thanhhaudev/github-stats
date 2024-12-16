@@ -168,7 +168,7 @@ func MakeCommitTimesOfDayList(commits []github.Commit) string {
 
 	for i, n := range longWeekTimeNames {
 		weekTime := WeekTime(i)
-		weekCommit := counts[WeekTime(i)]
+		weekCommit := counts[weekTime]
 		if weekCommit > topVal {
 			topVal = weekCommit
 			topWeek = weekTime

@@ -22,9 +22,9 @@ var weekTimeStatuses = []string{
 }
 
 var wakaRangeNames = map[string]string{
-	"last_7_days":   "This Week I Spent My Time On",
-	"last_30_days":  "This Month I Spent My Time On",
-	"last_6_months": "In the Last 6 Months I Spent My Time On",
-	"last_year":     "Last Year I Spent My Time On",
-	"all_time":      "All The Time I Spent On",
+	"last_7_days":   "What I Focused On in the Last 7 Days",
+	"last_30_days":  "How I Spent My Time Over the Last 30 Days",
+	"last_6_months": "Where My Time Went in the Last 6 Months",
+	"last_year":     "My Time Highlights from Last Year",
+	"all_time":      "How I’ve Used My Time Across All Time",
 }
