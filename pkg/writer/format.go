@@ -7,18 +7,23 @@ var longWeekTimeNames = []string{
 	"Night",
 }
 
-var weekTimeEmoji = []string{
+var timesOfDayEmoji = []string{
 	"🌅",
 	"🌞",
 	"🌆",
 	"🌙",
 }
 
-var weekTimeStatuses = []string{
-	"An Early Bird 🐣",
+var longTimesOfDayStatuses = []string{
+	"An Early Bird 🐤",
 	"An Afternoon Warrior 🥷🏻",
 	"A Twilight Taskmaster 🌆",
 	"A Night Owl 🦉",
+}
+
+var timesOfDayStatuses = []string{
+	"An Early 🐤",
+	"A Night 🦉",
 }
 
 var wakaRangeNames = map[string]string{

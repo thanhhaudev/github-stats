@@ -175,7 +175,7 @@ func MakeCommitTimesOfDayList(commits []github.Commit) string {
 		}
 
 		data = append(data, Data{
-			Name: fmt.Sprintf("%s %s", weekTimeEmoji[weekTime], n),
+			Name: fmt.Sprintf("%s %s", timesOfDayEmoji[weekTime], n),
 			Description: fmt.Sprintf("%s %s", addCommas(weekCommit), func() string {
 				if weekCommit > 1 {
 					return "commits"
@@ -187,7 +187,16 @@ func MakeCommitTimesOfDayList(commits []github.Commit) string {
 		})
 	}
 
-	return fmt.Sprintf("**🕒 I'm %s**\n\n", weekTimeStatuses[topWeek]) + "```text" + makeList(data...) + "```\n\n"
+	status := longTimesOfDayStatuses[topWeek]
+	if os.Getenv("SIMPLIFY_COMMIT_TIMES_TITLE") == "true" {
+		if (data[0].Percent + data[1].Percent) > (data[2].Percent + data[3].Percent) {
+			status = timesOfDayStatuses[0]
+		} else {
+			status = timesOfDayStatuses[1]
+		}
+	}
+
+	return fmt.Sprintf("**🕒 I'm %s**\n\n", status) + "```text" + makeList(data...) + "```\n\n"
 }
 
 // MakeCommitDaysOfWeekList returns a list of commits made on each day of the week
