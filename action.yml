@@ -47,6 +47,9 @@ inputs:
   EXCLUDE_FORK_REPOS:
     description: 'Exclude fork repositories'
     required: false
+  SIMPLIFY_COMMIT_TIMES_TITLE:
+    description: 'Simply title for COMMIT_TIMES_OF_DAY'
+    required: false
 runs:
   using: docker
   image: Dockerfile

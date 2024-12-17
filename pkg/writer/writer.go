@@ -129,8 +129,8 @@ func MakeLastUpdatedOn(t string) string {
 	return fmt.Sprintf("\n\n⏳ *Last updated on %s*", t)
 }
 
-// MakeCommitTimeOfDayList returns a list of commits made during different times of the day
-func MakeCommitTimeOfDayList(commits []github.Commit) string {
+// MakeCommitTimesOfDayList returns a list of commits made during different times of the day
+func MakeCommitTimesOfDayList(commits []github.Commit) string {
 	if len(commits) == 0 {
 		return ""
 	}
@@ -168,14 +168,14 @@ func MakeCommitTimeOfDayList(commits []github.Commit) string {
 
 	for i, n := range longWeekTimeNames {
 		weekTime := WeekTime(i)
-		weekCommit := counts[WeekTime(i)]
+		weekCommit := counts[weekTime]
 		if weekCommit > topVal {
 			topVal = weekCommit
 			topWeek = weekTime
 		}
 
 		data = append(data, Data{
-			Name: fmt.Sprintf("%s %s", weekTimeEmoji[weekTime], n),
+			Name: fmt.Sprintf("%s %s", timesOfDayEmoji[weekTime], n),
 			Description: fmt.Sprintf("%s %s", addCommas(weekCommit), func() string {
 				if weekCommit > 1 {
 					return "commits"
@@ -187,7 +187,16 @@ func MakeCommitTimeOfDayList(commits []github.Commit) string {
 		})
 	}
 
-	return fmt.Sprintf("**🕒 I'm %s**\n\n", weekTimeStatuses[topWeek]) + "```text" + makeList(data...) + "```\n\n"
+	status := longTimesOfDayStatuses[topWeek]
+	if os.Getenv("SIMPLIFY_COMMIT_TIMES_TITLE") == "true" {
+		if (data[0].Percent + data[1].Percent) > (data[2].Percent + data[3].Percent) {
+			status = timesOfDayStatuses[0]
+		} else {
+			status = timesOfDayStatuses[1]
+		}
+	}
+
+	return fmt.Sprintf("**🕒 I'm %s**\n\n", status) + "```text" + makeList(data...) + "```\n\n"
 }
 
 // MakeCommitDaysOfWeekList returns a list of commits made on each day of the week

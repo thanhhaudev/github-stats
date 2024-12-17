@@ -34,30 +34,31 @@ This GitHub Action collects your GitHub data and coding activity from WakaTime. 
 ## Usage
 
 ### Environment Variables
-| Name                   | Description                                                                                                                                                                                      | Required                          | Default                   |
-|------------------------|--------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------|-----------------------------------|---------------------------|
-| `GITHUB_TOKEN`         | The GitHub token to authenticate API requests.                                                                                                                                                   | Yes                               | -                         |
-| `SHOW_METRICS`         | The metrics to show in the `README.md` file.                                                                                                                                                     | Yes                               | -                         |
-| `WAKATIME_API_KEY`     | The WakaTime API key to fetch coding activity statistics.                                                                                                                                        | No                                | -                         |
-| `WAKATIME_RANGE`       | The range for WakaTime statistics (e.g., `last_7_days`, `last_30_days`, `last_6_months`, `last_year`, `all_time`).                                                                               | No                                | last_7_days               |
-| `WAKATIME_DATA`        | The data to show from WakaTime statistics.                                                                                                                                                       | If `WAKATIME_API_KEY` is provided | -                         |
-| `TIME_ZONE`            | The timezone to use for statistics.                                                                                                                                                              | No                                | UTC                       |
-| `TIME_LAYOUT`          | The layout of the time to show in the last update time.                                                                                                                                          | No                                | 2006-01-02 15:04:05 -0700 |
-| `SHOW_LAST_UPDATE`     | Whether to show the last update time in the `README.md` file.                                                                                                                                    | No                                | -                         |
-| `ONLY_MAIN_BRANCH`     | Whether to fetch data only from the main branch. If you don’t set this, it will search for commits in all branches of the repository to count the number of commits, which might take more time. | No                                | -                         |
-| `COMMIT_MESSAGE`       | The commit message to use when updating the `README.md`.                                                                                                                                         | No                                | 📝 Update README.md       |
-| `COMMIT_USER_NAME`     | The name to use for the commit.                                                                                                                                                                  | No                                | GitHub Action             |
-| `COMMIT_USER_EMAIL`    | The email to use for the commit.                                                                                                                                                                 | No                                | action@github.com         |
-| `SECTION_NAME`         | The section name in the `README.md` to update.                                                                                                                                                   | No                                | readme-stats              |
-| `HIDE_REPO_INFO`       | Whether to hide the repository information in action logs.                                                                                                                                       | No                                | -                         |
-| `PROGRESS_BAR_VERSION` | The version of the progress bar to use.                                                                                                                                                          | No                                | 1                         |
-| `EXCLUDE_FORK_REPOS`   | Whether to exclude fork repositories from the metrics.                                                                                                                                           | No                                | -                         |
-| `LANGUAGES_AND_TOOLS`  | The languages and tools that you used in your repositories.                                                                                                                                      | No                                | -                         |
+| Name                          | Description                                                                                                                                                                                      | Required                          | Default                   |
+|-------------------------------|--------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------|-----------------------------------|---------------------------|
+| `GITHUB_TOKEN`                | The GitHub token to authenticate API requests.                                                                                                                                                   | Yes                               | -                         |
+| `SHOW_METRICS`                | The metrics to show in the `README.md` file.                                                                                                                                                     | Yes                               | -                         |
+| `WAKATIME_API_KEY`            | The WakaTime API key to fetch coding activity statistics.                                                                                                                                        | No                                | -                         |
+| `WAKATIME_RANGE`              | The range for WakaTime statistics (e.g., `last_7_days`, `last_30_days`, `last_6_months`, `last_year`, `all_time`).                                                                               | No                                | last_7_days               |
+| `WAKATIME_DATA`               | The data to show from WakaTime statistics.                                                                                                                                                       | If `WAKATIME_API_KEY` is provided | -                         |
+| `TIME_ZONE`                   | The timezone to use for statistics.                                                                                                                                                              | No                                | UTC                       |
+| `TIME_LAYOUT`                 | The layout of the time to show in the last update time.                                                                                                                                          | No                                | 2006-01-02 15:04:05 -0700 |
+| `SHOW_LAST_UPDATE`            | Whether to show the last update time in the `README.md` file.                                                                                                                                    | No                                | -                         |
+| `ONLY_MAIN_BRANCH`            | Whether to fetch data only from the main branch. If you don’t set this, it will search for commits in all branches of the repository to count the number of commits, which might take more time. | No                                | -                         |
+| `COMMIT_MESSAGE`              | The commit message to use when updating the `README.md`.                                                                                                                                         | No                                | 📝 Update README.md       |
+| `COMMIT_USER_NAME`            | The name to use for the commit.                                                                                                                                                                  | No                                | GitHub Action             |
+| `COMMIT_USER_EMAIL`           | The email to use for the commit.                                                                                                                                                                 | No                                | action@github.com         |
+| `SECTION_NAME`                | The section name in the `README.md` to update.                                                                                                                                                   | No                                | readme-stats              |
+| `HIDE_REPO_INFO`              | Whether to hide the repository information in action logs.                                                                                                                                       | No                                | -                         |
+| `PROGRESS_BAR_VERSION`        | The version of the progress bar to use.                                                                                                                                                          | No                                | 1                         |
+| `EXCLUDE_FORK_REPOS`          | Whether to exclude fork repositories from the metrics.                                                                                                                                           | No                                | -                         |
+| `LANGUAGES_AND_TOOLS`         | The languages and tools that you used in your repositories.                                                                                                                                      | No                                | -                         |
+| `SIMPLIFY_COMMIT_TIMES_TITLE` | If you want to display a simplified title when using `COMMIT_TIMES_OF_DAY`, enable this option to show either "I'm An Early 🐤" or "I'm A Night 🦉" based on the commit time.                    | No                                | -                         |
 
 ### Metrics
 The `SHOW_METRICS` environment variable is used to specify the metrics to show in the `README.md` file. You can choose from the following metrics:
 
-**COMMIT_TIME_OF_DAY**: The time of day you make commits.
+**COMMIT_TIMES_OF_DAY**: The distribution of your commits across different times of the day, such as morning, daytime, evening, and night.
 
    **🕒 I'm An Afternoon Warrior 🥷🏻**
    ```
@@ -143,11 +144,11 @@ Use the `WAKATIME_DATA` environment variable to specify the data to show.
   ```
 
 You can use the `WAKATIME_RANGE` environment variable to set the time range for WakaTime statistics. Each value will show a specific label as follows:
-+ `last_7_days`: 📊 This Week I Spent My Time On
-+ `last_30_days`: 📊 This Month I Spent My Time On
-+ `last_6_months`: 📊 In the Last 6 Months I Spent My Time On
-+ `last_year`: 📊 This Year I Spent My Time On
-+ `all_time`: 📊 All The Time I Spent On
++ `last_7_days`: What I Focused On in the Last 7 Days
++ `last_30_days`: How I Spent My Time Over the Last 30 Days
++ `last_6_months`: Where My Time Went in the Last 6 Months
++ `last_year`: My Time Highlights from Last Year
++ `all_time`: How I’ve Used My Time Across All Time
 
 **Note**: If you don't provide the `WAKATIME_API_KEY`, the `WAKATIME_SPENT_TIME` metric will not be shown.
 
@@ -187,7 +188,7 @@ jobs:
           GITHUB_TOKEN: ${{ secrets.GH_TOKEN }} # GitHub token, required
           WAKATIME_API_KEY: ${{ secrets.WAKATIME_API_KEY }}
           WAKATIME_DATA: "EDITORS,LANGUAGES,PROJECTS,OPERATING_SYSTEMS" # show data, separated by comma
-          SHOW_METRICS: "COMMIT_TIME_OF_DAY,LANGUAGE_PER_REPO,COMMIT_DAYS_OF_WEEK,WAKATIME_SPENT_TIME" # show metrics, separated by comma
+          SHOW_METRICS: "COMMIT_TIMES_OF_DAY,LANGUAGE_PER_REPO,COMMIT_DAYS_OF_WEEK,WAKATIME_SPENT_TIME" # show metrics, separated by comma
           SHOW_LAST_UPDATE: "true" # show last update time
           ONLY_MAIN_BRANCH: "true" # only fetch data from the main branch
 ```
