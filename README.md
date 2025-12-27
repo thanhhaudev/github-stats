@@ -109,7 +109,7 @@ Shows when you code during the day (morning, daytime, evening, night).
 
 **Example output:**
 
-**🕒 I'm An Afternoon Warrior 🥷🏻**
+**🕒 I'm An Early Bird 🐤**
 ```
 🌅 Morning                214 commits         ████░░░░░░░░░░░░░░░░░░░░░   17.33%
 🌞 Daytime                444 commits         █████████░░░░░░░░░░░░░░░░   35.95%
