@@ -34,6 +34,28 @@ type Stats struct {
 	} `json:"data"`
 }
 
+type AllTimeSinceTodayStats struct {
+	Data struct {
+		TotalSeconds    float64 `json:"total_seconds"`
+		Text            string  `json:"text"`
+		Decimal         string  `json:"decimal"`
+		Digital         string  `json:"digital"`
+		DailyAverage    int     `json:"daily_average"`
+		IsUpToDate      bool    `json:"is_up_to_date"`
+		PercentCalculated int   `json:"percent_calculated"`
+		Range           struct {
+			Start     string `json:"start"`
+			StartDate string `json:"start_date"`
+			StartText string `json:"start_text"`
+			End       string `json:"end"`
+			EndDate   string `json:"end_date"`
+			EndText   string `json:"end_text"`
+			Timezone  string `json:"timezone"`
+		} `json:"range"`
+		Timeout int `json:"timeout"`
+	} `json:"data"`
+}
+
 type StatsRange string
 
 func (s StatsRange) IsValid() bool {
@@ -66,6 +88,18 @@ func (s *StatsService) Get(ctx context.Context) (*Stats, error) {
 			return &stats, nil
 		}
 
+		return nil, err
+	}
+
+	return &stats, nil
+}
+
+// GetAllTimeSinceToday retrieves the user's all-time coding statistics since today
+func (s *StatsService) GetAllTimeSinceToday(ctx context.Context) (*AllTimeSinceTodayStats, error) {
+	var stats AllTimeSinceTodayStats
+
+	err := s.Client.GetWithContext(ctx, "users/current/all_time_since_today", nil, &stats)
+	if err != nil {
 		return nil, err
 	}
 

@@ -192,6 +192,16 @@ func (c *ClientManager) GetWakaTimeStats(ctx context.Context) (*wakatime.Stats, 
 	return stats, nil
 }
 
+// GetWakaTimeAllTimeSinceToday returns the user's all-time coding statistics since today
+func (c *ClientManager) GetWakaTimeAllTimeSinceToday(ctx context.Context) (*wakatime.AllTimeSinceTodayStats, error) {
+	stats, err := c.WakaTimeClient.Stats.GetAllTimeSinceToday(ctx)
+	if err != nil {
+		return nil, err
+	}
+
+	return stats, nil
+}
+
 // NewClientManager creates a new ClientManager
 func NewClientManager(w *wakatime.WakaTime, g *github.GitHub) *ClientManager {
 	return &ClientManager{w, g}
