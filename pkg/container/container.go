@@ -24,10 +24,11 @@ type DataContainer struct {
 	ClientManager *ClientManager
 	Logger        *log.Logger
 	Data          struct {
-		Viewer       *github.Viewer
-		Repositories []github.Repository
-		Commits      []github.Commit
-		WakaTime     *wakatime.Stats
+		Viewer          *github.Viewer
+		Repositories    []github.Repository
+		Commits         []github.Commit
+		WakaTime        *wakatime.Stats
+		WakaTimeAllTime *wakatime.AllTimeSinceTodayStats
 	}
 }
 
@@ -42,6 +43,7 @@ func (d *DataContainer) metrics(com *CommitStats, lang *LanguageStats) map[strin
 			d.Data.WakaTime,
 			strings.Split(os.Getenv("WAKATIME_DATA"), ","),
 		),
+		"CODING_STREAK": writer.MakeCodingStreakList(d.Data.WakaTimeAllTime, com.CurrentStreak, com.LongestStreak),
 	}
 }
 
@@ -307,6 +309,15 @@ func (d *DataContainer) InitWakaStats(ctx context.Context) error {
 	}
 
 	d.Data.WakaTime = v
+
+	// fetch all-time stats for streak calculation
+	d.Logger.Println("Fetching WakaTime all-time statistics...")
+	allTimeStats, err := d.ClientManager.GetWakaTimeAllTimeSinceToday(ctx)
+	if err != nil {
+		d.Logger.Println("An error occurred while fetching WakaTime all-time data:", err)
+	} else {
+		d.Data.WakaTimeAllTime = allTimeStats
+	}
 
 	return nil
 }

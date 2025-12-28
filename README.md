@@ -11,6 +11,7 @@ Automatically update your GitHub profile README with beautiful metrics about you
 - 📅 **Commit Patterns** - Visualize when you code most (time of day, day of week)
 - 💻 **Language Statistics** - Track programming languages across your repositories
 - ⏱️ **WakaTime Integration** - Display coding time, editors, projects and OS usage
+- 📈 **Coding Streak Tracker** - Track your coding consistency and streaks with WakaTime
 - 🎨 **Customizable** - Choose metrics and customize appearance
 - 🔄 **Auto-Updating** - Runs on schedule to keep your profile fresh
 - 🚀 **Easy Setup** - Get started in 5 minutes
@@ -83,7 +84,8 @@ jobs:
         uses: thanhhaudev/github-stats@master
         env:
           GITHUB_TOKEN: ${{ secrets.GH_TOKEN }}
-          SHOW_METRICS: "COMMIT_TIMES_OF_DAY,COMMIT_DAYS_OF_WEEK,LANGUAGE_PER_REPO"
+          WAKATIME_API_KEY: ${{ secrets.WAKATIME_API_KEY }}  # Optional: for WakaTime metrics
+          SHOW_METRICS: "COMMIT_TIMES_OF_DAY,COMMIT_DAYS_OF_WEEK,LANGUAGE_PER_REPO,CODING_STREAK"
 ```
 ### Step 6: Trigger the Action
 
@@ -100,8 +102,36 @@ Choose which metrics to display by setting the `SHOW_METRICS` environment variab
 
 **Example:**
 ```yaml
-SHOW_METRICS: "COMMIT_TIMES_OF_DAY,COMMIT_DAYS_OF_WEEK,LANGUAGE_PER_REPO"
+SHOW_METRICS: "COMMIT_TIMES_OF_DAY,COMMIT_DAYS_OF_WEEK,LANGUAGE_PER_REPO,CODING_STREAK"
 ```
+### 📈 `CODING_STREAK`
+
+Shows your coding streak and consistency metrics combining GitHub commit data with WakaTime statistics.
+
+**Requirements:**
+- GitHub commit data (automatically collected) - **Required**
+- `WAKATIME_API_KEY` (optional) - Adds coding time statistics
+
+**Example output (with WakaTime):**
+
+**📈 Coding Streak**
+```
+🔥 Current Streak:        14 days
+🏆 Longest Streak:        45 days
+📊 Daily Average:         3 hrs 44 mins
+💪 Total Coding Time:     1,383 hrs 16 mins
+🎯 Coding Consistency:    87.5%
+📅 Active Days:           128 days
+```
+
+**Example output (without WakaTime):**
+```
+🔥 Current Streak:        14 days
+🏆 Longest Streak:        45 days
+```
+
+> 💡 **Note:** Streaks are calculated from your GitHub commit history (consecutive days with at least one commit). The metric respects your `TIME_ZONE` setting for accurate day boundaries. Coding time and consistency metrics are only shown when WakaTime is configured.
+
 
 ### 🕒 `COMMIT_TIMES_OF_DAY`
 
@@ -270,7 +300,7 @@ env:
   WAKATIME_API_KEY: ${{ secrets.WAKATIME_API_KEY }}
   WAKATIME_DATA: "EDITORS,LANGUAGES,PROJECTS,OPERATING_SYSTEMS"
   WAKATIME_RANGE: "last_30_days"
-  SHOW_METRICS: "COMMIT_TIMES_OF_DAY,COMMIT_DAYS_OF_WEEK,LANGUAGE_PER_REPO,LANGUAGES_AND_TOOLS,WAKATIME_SPENT_TIME"
+  SHOW_METRICS: "COMMIT_TIMES_OF_DAY,COMMIT_DAYS_OF_WEEK,LANGUAGE_PER_REPO,LANGUAGES_AND_TOOLS,WAKATIME_SPENT_TIME,CODING_STREAK"
   SHOW_LAST_UPDATE: "true"
   ONLY_MAIN_BRANCH: "true"
   PROGRESS_BAR_VERSION: "2"
