@@ -27,9 +27,9 @@ var timesOfDayStatuses = []string{
 }
 
 var wakaRangeNames = map[string]string{
-	"last_7_days":   "📅 Last 7 Days",
-	"last_30_days":  "📊 Last 30 Days",
-	"last_6_months": "📈 Last 6 Months",
-	"last_year":     "🗓️ Last 12 Months",
-	"all_time":      "⏱️ All Time",
+	"last_7_days":   "📅 Last 7 Days Stats",
+	"last_30_days":  "📊 Last 30 Days Stats",
+	"last_6_months": "📈 Last 6 Months Stats",
+	"last_year":     "🗓️ Last 12 Months Stats",
+	"all_time":      "⏱️ All Time Stats",
 }
