@@ -207,13 +207,13 @@ Linux                    6 hrs  3 mins       ████░░░░░░░�
 
 **Time range options** (set with `WAKATIME_RANGE`):
 
-| Value           | Title Displayed                           |
-|-----------------|-------------------------------------------|
-| `last_7_days`   | What I Focused On in the Last 7 Days      |
-| `last_30_days`  | How I Spent My Time Over the Last 30 Days |
-| `last_6_months` | Where My Time Went in the Last 6 Months   |
-| `last_year`     | My Time Highlights from Last Year         |
-| `all_time`      | How I've Used My Time Across All Time     |
+| Value           | Title Displayed    |
+|-----------------|--------------------|
+| `last_7_days`   | 📅 Last 7 Days     |
+| `last_30_days`  | 📊 Last 30 Days    |
+| `last_6_months` | 📈 Last 6 Months   |
+| `last_year`     | 🗓️ Last 12 Months |
+| `all_time`      | ⏱️ All Time        |
 
 ---
 

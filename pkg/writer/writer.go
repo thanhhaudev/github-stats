@@ -85,7 +85,7 @@ func MakeWakaActivityList(s *wakatime.Stats, i []string) string {
 
 	res = strings.TrimSuffix(res, "\n") // trim last newline
 
-	return fmt.Sprintf("**📊 %s**\n\n", wakaRangeNames[s.Data.Range]) + "```text\n" + res + "```\n\n"
+	return fmt.Sprintf("**%s**\n\n", wakaRangeNames[s.Data.Range]) + "```text\n" + res + "```\n\n"
 }
 
 func buildWakaData(i []wakatime.StatsItem) []Data {
