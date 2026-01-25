@@ -100,6 +100,13 @@ func (s *StatsService) GetAllTimeSinceToday(ctx context.Context) (*AllTimeSinceT
 
 	err := s.Client.GetWithContext(ctx, "users/current/all_time_since_today", nil, &stats)
 	if err != nil {
+		var wakaTimeErr *WakaTimeError
+		if errors.As(err, &wakaTimeErr) && wakaTimeErr.IsNotCompleted() {
+			s.Logger.Println("WakaTime all-time stats processing has not completed yet, please retry after a few minutes")
+
+			return &stats, nil
+		}
+
 		return nil, err
 	}
 
