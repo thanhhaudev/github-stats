@@ -1,9 +1,19 @@
-FROM golang:1.22
+# Build stage
+FROM golang:1.24 AS builder
 
-ENV GITHUB_TOKEN=${GITHUB_TOKEN}
+WORKDIR /build
+COPY go.mod go.sum ./
+RUN go mod download
 
-COPY . /home/src
-WORKDIR /home/src
-RUN go build -o /bin/cmd ./cmd
+COPY . .
+RUN CGO_ENABLED=0 GOOS=linux go build -a -installsuffix cgo -o cmd ./cmd
 
-ENTRYPOINT [ "/bin/cmd" ]
+# Runtime stage
+FROM alpine:latest
+
+RUN apk --no-cache add ca-certificates git
+WORKDIR /root/
+
+COPY --from=builder /build/cmd .
+
+ENTRYPOINT ["./cmd"]
