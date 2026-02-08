@@ -85,7 +85,7 @@ func MakeWakaActivityList(s *wakatime.Stats, i []string) string {
 
 	res = strings.TrimSuffix(res, "\n") // trim last newline
 
-	return fmt.Sprintf("**📊 %s**\n\n", wakaRangeNames[s.Data.Range]) + "```text\n" + res + "```\n\n"
+	return fmt.Sprintf("**%s**\n\n", wakaRangeNames[s.Data.Range]) + "```text\n" + res + "```\n\n"
 }
 
 func buildWakaData(i []wakatime.StatsItem) []Data {
@@ -127,6 +127,53 @@ func buildWakaData(i []wakatime.StatsItem) []Data {
 // MakeLastUpdatedOn returns a string with the last updated time
 func MakeLastUpdatedOn(t string) string {
 	return fmt.Sprintf("\n\n⏳ *Last updated on %s*", t)
+}
+
+// MakeCodingStreakList returns coding streak statistics from commit data and WakaTime all-time data
+// Works with or without WakaTime data - shows commit streaks even if WakaTime is not configured
+func MakeCodingStreakList(s *wakatime.AllTimeSinceTodayStats, currentStreak, longestStreak int) string {
+	if s == nil && currentStreak == 0 && longestStreak == 0 {
+		return "" // return empty when there's no streaks and no WakaTime data
+	}
+
+	var b strings.Builder
+	b.WriteString("**📈 Coding Streak**\n\n")
+	b.WriteString("```text\n")
+
+	// always show streak data from commits
+	b.WriteString(fmt.Sprintf("🔥 Current Streak:        %d days\n", currentStreak))
+	b.WriteString(fmt.Sprintf("🏆 Longest Streak:        %d days\n", longestStreak))
+
+	// show WakaTime data if available
+	if s != nil {
+		// calculate daily average hours and minutes
+		dailyAvgHours := s.Data.DailyAverage / 3600
+		dailyAvgMinutes := (s.Data.DailyAverage % 3600) / 60
+
+		// parse start and end dates to calculate total days
+		startDate, _ := time.Parse("2006-01-02", s.Data.Range.StartDate)
+		endDate, _ := time.Parse("2006-01-02", s.Data.Range.EndDate)
+		totalDays := int(endDate.Sub(startDate).Hours() / 24)
+
+		var activeDays int
+		if s.Data.DailyAverage > 0 {
+			activeDays = int(s.Data.TotalSeconds / float64(s.Data.DailyAverage)) // calculate active days based on total seconds and daily average
+		}
+
+		var consistencyPercent float64
+		if totalDays > 0 {
+			consistencyPercent = (float64(activeDays) / float64(totalDays)) * 100 // calculate consistency percentage
+		}
+
+		b.WriteString(fmt.Sprintf("📊 Daily Average:         %d hrs %d mins\n", dailyAvgHours, dailyAvgMinutes))
+		b.WriteString(fmt.Sprintf("💪 Total Coding Time:     %s\n", s.Data.Text))
+		b.WriteString(fmt.Sprintf("🎯 Coding Consistency:    %.1f%%\n", consistencyPercent))
+		b.WriteString(fmt.Sprintf("📅 Active Days:           %s days\n", addCommas(activeDays)))
+	}
+
+	b.WriteString("```\n\n")
+
+	return b.String()
 }
 
 // MakeCommitTimesOfDayList returns a list of commits made during different times of the day

@@ -53,6 +53,23 @@ inputs:
 runs:
   using: docker
   image: Dockerfile
+  env:
+    GITHUB_TOKEN: ${{ inputs.GITHUB_TOKEN }}
+    SHOW_METRICS: ${{ inputs.SHOW_METRICS }}
+    WAKATIME_API_KEY: ${{ inputs.WAKATIME_API_KEY }}
+    WAKATIME_DATA: ${{ inputs.WAKATIME_DATA }}
+    WAKATIME_RANGE: ${{ inputs.WAKATIME_RANGE }}
+    TIME_ZONE: ${{ inputs.TIME_ZONE }}
+    TIME_LAYOUT: ${{ inputs.TIME_LAYOUT }}
+    SHOW_LAST_UPDATE: ${{ inputs.SHOW_LAST_UPDATE }}
+    ONLY_MAIN_BRANCH: ${{ inputs.ONLY_MAIN_BRANCH }}
+    HIDE_REPO_INFO: ${{ inputs.HIDE_REPO_INFO }}
+    COMMIT_MESSAGE: ${{ inputs.COMMIT_MESSAGE }}
+    COMMIT_USER_NAME: ${{ inputs.COMMIT_USER_NAME }}
+    COMMIT_USER_EMAIL: ${{ inputs.COMMIT_USER_EMAIL }}
+    LANGUAGES_AND_TOOLS: ${{ inputs.LANGUAGES_AND_TOOLS }}
+    EXCLUDE_FORK_REPOS: ${{ inputs.EXCLUDE_FORK_REPOS }}
+    SIMPLIFY_COMMIT_TIMES_TITLE: ${{ inputs.SIMPLIFY_COMMIT_TIMES_TITLE }}
 branding:
   icon: 'star'
   color: 'orange'
