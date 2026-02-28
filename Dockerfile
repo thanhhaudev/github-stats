@@ -6,14 +6,13 @@ COPY go.mod go.sum ./
 RUN go mod download
 
 COPY . .
-RUN CGO_ENABLED=0 GOOS=linux go build -a -installsuffix cgo -o cmd ./cmd
+RUN CGO_ENABLED=0 GOOS=linux go build -o /build/github-stats ./cmd
 
 # Runtime stage
 FROM alpine:latest
 
-RUN apk --no-cache add ca-certificates git
-WORKDIR /root/
+WORKDIR /root
+COPY --from=builder /build/github-stats /root/github-stats
+RUN chmod +x /root/github-stats
 
-COPY --from=builder /build/cmd .
-
-ENTRYPOINT ["./cmd"]
+ENTRYPOINT ["/root/github-stats"]
