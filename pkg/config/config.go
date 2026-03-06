@@ -68,6 +68,11 @@ type Config struct {
 	HideRepoInfo     bool
 	ExcludeForkRepos bool
 	OnlyMainBranch   bool
+
+	// Cache settings
+	EnableCache bool
+	CacheTTL    int // in hours
+	CacheFile   string
 }
 
 // Load reads all environment variables and returns a Config struct
@@ -101,6 +106,14 @@ func Load() *Config {
 		HideRepoInfo:     os.Getenv("HIDE_REPO_INFO") == TrueVal,
 		ExcludeForkRepos: os.Getenv("EXCLUDE_FORK_REPOS") == TrueVal,
 		OnlyMainBranch:   os.Getenv("ONLY_MAIN_BRANCH") == TrueVal,
+
+		// Cache settings
+		EnableCache: os.Getenv("ENABLE_CACHE") == TrueVal,
+		CacheFile:   os.Getenv("CACHE_FILE"),
+	}
+
+	if ttl := os.Getenv("CACHE_TTL"); ttl != "" {
+		fmt.Sscanf(ttl, "%d", &cfg.CacheTTL)
 	}
 
 	cfg.applyDefaults()
@@ -124,6 +137,14 @@ func (c *Config) applyDefaults() {
 
 	if c.SectionName == "" {
 		c.SectionName = "readme-stats"
+	}
+
+	if c.CacheFile == "" {
+		c.CacheFile = ".github-stats-cache.json"
+	}
+
+	if c.CacheTTL == 0 {
+		c.CacheTTL = 2 // Default to 2 hours
 	}
 }
 

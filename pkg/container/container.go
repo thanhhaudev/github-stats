@@ -99,6 +99,7 @@ func (d *DataContainer) InitViewer(ctx context.Context) error {
 	}
 
 	d.Data.Viewer = v
+	d.Logger.Printf("Successfully fetched viewer: %s (ID: %s)\n", v.Login, v.ID)
 
 	return nil
 }
@@ -347,6 +348,8 @@ func (d *DataContainer) Build(ctx context.Context) error {
 		}
 
 		d.Logger.Println("Fetching data from GitHub APIs successfully")
+	} else {
+		d.Logger.Println("⚠️ GitHub client is nil, skipping GitHub data fetching")
 	}
 
 	// if the WakaTime client is not nil, fetch data from WakaTime APIs

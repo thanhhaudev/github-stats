@@ -6,6 +6,7 @@ import (
 	"encoding/json"
 	"fmt"
 	"net/http"
+	"strings"
 )
 
 const ApiEndpoint = "https://api.github.com"
@@ -14,6 +15,15 @@ type Client struct {
 	token      string
 	origin     string
 	httpClient *http.Client
+}
+
+type GraphQLError struct {
+	Message string `json:"message"`
+	Path    []any  `json:"path"`
+}
+
+type Response struct {
+	Errors []GraphQLError `json:"errors"`
 }
 
 type Request struct {
@@ -104,7 +114,21 @@ func (c *Client) do(httpReq *http.Request, v interface{}) error {
 		return fmt.Errorf("unexpected status code: %d", resp.StatusCode)
 	}
 
-	return json.NewDecoder(resp.Body).Decode(v)
+	var body bytes.Buffer
+	if _, err := body.ReadFrom(resp.Body); err != nil {
+		return err
+	}
+
+	var gqlResp Response
+	if err := json.Unmarshal(body.Bytes(), &gqlResp); err == nil && len(gqlResp.Errors) > 0 {
+		var msgs []string
+		for _, e := range gqlResp.Errors {
+			msgs = append(msgs, e.Message)
+		}
+		return fmt.Errorf("github graphql error: %s", strings.Join(msgs, "; "))
+	}
+
+	return json.Unmarshal(body.Bytes(), v)
 }
 
 // NewClient creates a new GitHub client
