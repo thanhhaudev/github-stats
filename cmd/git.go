@@ -10,9 +10,7 @@ import (
 )
 
 // setupGitConfig sets up the git configuration
-func setupGitConfig(owner, token, name, email string) error {
-	hideRepoInfo := os.Getenv("HIDE_REPO_INFO") == "true"
-
+func setupGitConfig(owner, token, name, email string, hideRepoInfo bool) error {
 	if name == "" {
 		name = "GitHub Action"
 	}
@@ -53,9 +51,7 @@ func hasReadmeChanged() (bool, error) {
 }
 
 // commitAndPushReadme Commit and push changes if README.md has changed
-func commitAndPushReadme(msg, branch string) error {
-	hideRepoInfo := os.Getenv("HIDE_REPO_INFO") == "true"
-
+func commitAndPushReadme(msg, branch string, hideRepoInfo bool) error {
 	if branch == "" {
 		branch = "main"
 	}

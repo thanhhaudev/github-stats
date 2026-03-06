@@ -3,7 +3,6 @@ package writer
 import (
 	"fmt"
 	"math"
-	"os"
 	"sort"
 	"strings"
 	"time"
@@ -64,7 +63,7 @@ func MakeLanguageAndToolList(l map[string][2]interface{}, totalSize int) string 
 }
 
 // MakeWakaActivityList returns a list of activities
-func MakeWakaActivityList(s *wakatime.Stats, i []string) string {
+func MakeWakaActivityList(s *wakatime.Stats, i []string, version string) string {
 	if s == nil || len(i) == 0 {
 		return ""
 	}
@@ -73,13 +72,13 @@ func MakeWakaActivityList(s *wakatime.Stats, i []string) string {
 	for _, v := range i {
 		switch v {
 		case "LANGUAGES":
-			res = res + fmt.Sprintf("💬 Languages:") + makeList(buildWakaData(s.Data.Languages)...) + "\n"
+			res = res + fmt.Sprintf("💬 Languages:") + makeList(buildWakaData(s.Data.Languages), version) + "\n"
 		case "EDITORS":
-			res = res + fmt.Sprintf("📝 Editors:") + makeList(buildWakaData(s.Data.Editors)...) + "\n"
+			res = res + fmt.Sprintf("📝 Editors:") + makeList(buildWakaData(s.Data.Editors), version) + "\n"
 		case "OPERATING_SYSTEMS":
-			res = res + fmt.Sprintf("💻 Operating Systems:") + makeList(buildWakaData(s.Data.OperatingSystems)...) + "\n"
+			res = res + fmt.Sprintf("💻 Operating Systems:") + makeList(buildWakaData(s.Data.OperatingSystems), version) + "\n"
 		case "PROJECTS":
-			res = res + fmt.Sprintf("📦 Projects:") + makeList(buildWakaData(s.Data.Projects)...) + "\n"
+			res = res + fmt.Sprintf("📦 Projects:") + makeList(buildWakaData(s.Data.Projects), version) + "\n"
 		}
 	}
 
@@ -177,7 +176,7 @@ func MakeCodingStreakList(s *wakatime.AllTimeSinceTodayStats, currentStreak, lon
 }
 
 // MakeCommitTimesOfDayList returns a list of commits made during different times of the day
-func MakeCommitTimesOfDayList(commits []github.Commit) string {
+func MakeCommitTimesOfDayList(commits []github.Commit, simplifyTitle bool, version string) string {
 	if len(commits) == 0 {
 		return ""
 	}
@@ -235,7 +234,7 @@ func MakeCommitTimesOfDayList(commits []github.Commit) string {
 	}
 
 	status := longTimesOfDayStatuses[topWeek]
-	if os.Getenv("SIMPLIFY_COMMIT_TIMES_TITLE") == "true" {
+	if simplifyTitle {
 		if (data[0].Percent + data[1].Percent) > (data[2].Percent + data[3].Percent) {
 			status = timesOfDayStatuses[0]
 		} else {
@@ -243,11 +242,11 @@ func MakeCommitTimesOfDayList(commits []github.Commit) string {
 		}
 	}
 
-	return fmt.Sprintf("**🕒 I'm %s**\n\n", status) + "```text" + makeList(data...) + "```\n\n"
+	return fmt.Sprintf("**🕒 I'm %s**\n\n", status) + "```text" + makeList(data, version) + "```\n\n"
 }
 
 // MakeCommitDaysOfWeekList returns a list of commits made on each day of the week
-func MakeCommitDaysOfWeekList(wd map[time.Weekday]int, total int) string {
+func MakeCommitDaysOfWeekList(wd map[time.Weekday]int, total int, version string) string {
 	if total == 0 {
 		return ""
 	}
@@ -287,11 +286,11 @@ func MakeCommitDaysOfWeekList(wd map[time.Weekday]int, total int) string {
 		})
 	}
 
-	return fmt.Sprintf("**📅 I'm Most Productive on %s**\n\n", topName) + "```text" + makeList(data...) + "```\n\n"
+	return fmt.Sprintf("**📅 I'm Most Productive on %s**\n\n", topName) + "```text" + makeList(data, version) + "```\n\n"
 }
 
 // MakeLanguagePerRepoList returns a list of languages and the percentage of repositories that use them
-func MakeLanguagePerRepoList(r []github.Repository) string {
+func MakeLanguagePerRepoList(r []github.Repository, version string) string {
 	if len(r) == 0 {
 		return ""
 	}
@@ -337,21 +336,18 @@ func MakeLanguagePerRepoList(r []github.Repository) string {
 		})
 	}
 
-	return fmt.Sprintf("**🔥 I Mostly Code in %s**\n\n", topName) + "```text" + makeList(data...) + "```\n\n"
+	return fmt.Sprintf("**🔥 I Mostly Code in %s**\n\n", topName) + "```text" + makeList(data, version) + "```\n\n"
 }
 
-func makeList(d ...Data) string {
+func makeList(d []Data, version string) string {
 	if len(d) == 0 {
 		return "\nNo data available\n"
 	}
 
-	var (
-		b   strings.Builder
-		ver = os.Getenv("PROGRESS_BAR_VERSION")
-	)
+	var b strings.Builder
 
 	for _, val := range d {
-		b.WriteString(formatData(val, ver))
+		b.WriteString(formatData(val, version))
 	}
 
 	b.WriteString("\n")

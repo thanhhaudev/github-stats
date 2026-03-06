@@ -10,6 +10,7 @@ import (
 
 	_ "github.com/joho/godotenv/autoload"
 	"github.com/thanhhaudev/github-stats/pkg/clock"
+	"github.com/thanhhaudev/github-stats/pkg/config"
 	"github.com/thanhhaudev/github-stats/pkg/container"
 	"github.com/thanhhaudev/github-stats/pkg/github"
 	"github.com/thanhhaudev/github-stats/pkg/wakatime"
@@ -18,7 +19,16 @@ import (
 func main() {
 	logger := log.New(os.Stdout, "", log.Lmsgprefix)
 	logger.Println("🚀 Starting...")
-	cl, err := setClock(logger)
+
+	// load configuration
+	cfg := config.Load()
+
+	// validate configuration
+	if err := cfg.Validate(); err != nil {
+		logger.Fatalf("❌ Configuration error: %v", err)
+	}
+
+	cl, err := setClock(logger, cfg)
 	if err != nil {
 		panic(err)
 	}
@@ -28,31 +38,27 @@ func main() {
 	ctx = withClock(ctx, cl)
 	defer cancel()
 
-	token := os.Getenv("GITHUB_TOKEN")
-	if token == "" {
-		logger.Fatalln("❌ GITHUB_TOKEN is required for this action")
-	}
-
-	gc := github.NewGitHub(token)
-	wc := wakatime.NewWakaTime(logger, os.Getenv("WAKATIME_API_KEY"), wakatime.StatsRange(os.Getenv("WAKATIME_RANGE")))
-	dc := container.NewDataContainer(logger, container.NewClientManager(wc, gc))
+	gc := github.NewGitHub(cfg.GitHubToken)
+	wc := wakatime.NewWakaTime(logger, cfg.WakaTimeAPIKey, wakatime.StatsRange(cfg.WakaTimeRange))
+	dc := container.NewDataContainer(logger, container.NewClientManager(wc, gc), cfg)
 	if err := dc.Build(ctx); err != nil {
 		logger.Fatalln(err)
 	}
 
 	logger.Println("📝 Updating README.md...")
-	err = updateReadme(dc.GetStats(cl), os.Getenv("SECTION_NAME"))
+	err = updateReadme(dc.GetStats(cl), cfg.SectionName)
 	if err != nil {
 		logger.Fatalf("Error updating README.md: %v", err)
 	}
 
-	if os.Getenv("DRY_RUN") != "true" {
+	if !cfg.DryRun {
 		logger.Println("🔧 Setting up git config...")
 		err = setupGitConfig(
 			dc.Data.Viewer.Login,
-			os.Getenv("GITHUB_TOKEN"),
-			os.Getenv("COMMIT_USER_NAME"),
-			os.Getenv("COMMIT_USER_EMAIL"),
+			cfg.GitHubToken,
+			cfg.CommitUserName,
+			cfg.CommitUserEmail,
+			cfg.HideRepoInfo,
 		)
 		if err != nil {
 			logger.Fatalf("Error setting up git config: %v", err)
@@ -65,7 +71,7 @@ func main() {
 
 		if changed {
 			logger.Println("📤 Committing and pushing changes...")
-			err = commitAndPushReadme(os.Getenv("COMMIT_MESSAGE"), os.Getenv("BRANCH_NAME"))
+			err = commitAndPushReadme(cfg.CommitMessage, cfg.BranchName, cfg.HideRepoInfo)
 			if err != nil {
 				logger.Fatalf("Error committing and pushing changes: %v", err)
 			}
@@ -80,17 +86,17 @@ func main() {
 }
 
 // setClock sets the clock and timezone
-func setClock(logger *log.Logger) (clock.Clock, error) {
+func setClock(logger *log.Logger, cfg *config.Config) (clock.Clock, error) {
 	cl := clock.NewClock()
-	if tz := os.Getenv("TIME_ZONE"); tz != "" {
-		err := cl.SetLocation(tz)
+	if cfg.TimeZone != "" {
+		err := cl.SetLocation(cfg.TimeZone)
 		if err != nil {
-			logger.Printf("⚠️ Invalid timezone %s: %v\n", tz, err)
+			logger.Printf("⚠️ Invalid timezone %s: %v\n", cfg.TimeZone, err)
 
 			return nil, err
 		}
 
-		logger.Printf("🕙 Timezone set to %s\n", tz)
+		logger.Printf("🕙 Timezone set to %s\n", cfg.TimeZone)
 	}
 
 	return cl, nil

@@ -4,11 +4,11 @@ import (
 	"context"
 	"fmt"
 	"log"
-	"os"
 	"strings"
 	"sync"
 
 	"github.com/thanhhaudev/github-stats/pkg/clock"
+	"github.com/thanhhaudev/github-stats/pkg/config"
 	"github.com/thanhhaudev/github-stats/pkg/github"
 	"github.com/thanhhaudev/github-stats/pkg/wakatime"
 	"github.com/thanhhaudev/github-stats/pkg/writer"
@@ -23,6 +23,7 @@ const (
 type DataContainer struct {
 	ClientManager *ClientManager
 	Logger        *log.Logger
+	Config        *config.Config
 	Data          struct {
 		Viewer          *github.Viewer
 		Repositories    []github.Repository
@@ -34,14 +35,16 @@ type DataContainer struct {
 
 // metrics returns the metrics map
 func (d *DataContainer) metrics(com *CommitStats, lang *LanguageStats) map[string]string {
+	version := d.Config.ProgressBarVersion
 	return map[string]string{
-		"LANGUAGE_PER_REPO":   writer.MakeLanguagePerRepoList(d.Data.Repositories),
+		"LANGUAGE_PER_REPO":   writer.MakeLanguagePerRepoList(d.Data.Repositories, version),
 		"LANGUAGES_AND_TOOLS": writer.MakeLanguageAndToolList(lang.Languages, lang.TotalSize),
-		"COMMIT_DAYS_OF_WEEK": writer.MakeCommitDaysOfWeekList(com.DailyCommits, com.TotalCommits),
-		"COMMIT_TIMES_OF_DAY": writer.MakeCommitTimesOfDayList(d.Data.Commits),
+		"COMMIT_DAYS_OF_WEEK": writer.MakeCommitDaysOfWeekList(com.DailyCommits, com.TotalCommits, version),
+		"COMMIT_TIMES_OF_DAY": writer.MakeCommitTimesOfDayList(d.Data.Commits, d.Config.SimplifyCommitTimesTitle, version),
 		"WAKATIME_SPENT_TIME": writer.MakeWakaActivityList(
 			d.Data.WakaTime,
-			strings.Split(os.Getenv("WAKATIME_DATA"), ","),
+			d.Config.WakaTimeData,
+			version,
 		),
 		"CODING_STREAK": writer.MakeCodingStreakList(d.Data.WakaTimeAllTime, com.CurrentStreak, com.LongestStreak),
 	}
@@ -54,7 +57,7 @@ func (d *DataContainer) GetStats(cl clock.Clock) string {
 
 	// show metrics based on the environment variable
 	w := d.metrics(d.CalculateCommits(), d.CalculateLanguages())
-	for _, k := range strings.Split(os.Getenv("SHOW_METRICS"), ",") {
+	for _, k := range d.Config.ShowMetrics {
 		v, ok := w[k]
 		if !ok {
 			continue
@@ -64,16 +67,16 @@ func (d *DataContainer) GetStats(cl clock.Clock) string {
 	}
 
 	// Show last update time if enabled
-	showLastUpdated(cl, &b)
+	showLastUpdated(cl, &b, d.Config)
 
 	d.Logger.Println("Created statistics successfully")
 
 	return b.String()
 }
 
-func showLastUpdated(cl clock.Clock, b *strings.Builder) {
-	if os.Getenv("SHOW_LAST_UPDATE") == "true" {
-		layout := os.Getenv("TIME_LAYOUT")
+func showLastUpdated(cl clock.Clock, b *strings.Builder, cfg *config.Config) {
+	if cfg.ShowLastUpdate {
+		layout := cfg.TimeLayout
 		if layout == "" {
 			layout = clock.DateTimeFormatWithTimezone
 		}
@@ -107,7 +110,6 @@ func (d *DataContainer) InitRepositories(ctx context.Context) error {
 	seenRepos := make(map[string]bool)
 	errChan := make(chan error, 2)
 	repoChan := make(chan []github.Repository, 2)
-	isExcludeForks := os.Getenv("EXCLUDE_FORK_REPOS") == "true"
 
 	go func() {
 		r, err := d.ClientManager.GetOwnedRepositories(ctx, d.Data.Viewer.Login, repoPerQuery)
@@ -146,7 +148,7 @@ func (d *DataContainer) InitRepositories(ctx context.Context) error {
 	// Deduplicate repositories
 	for repos := range repoChan {
 		for _, repo := range repos {
-			if isExcludeForks && repo.IsFork {
+			if d.Config.ExcludeForkRepos && repo.IsFork {
 				continue
 			}
 
@@ -163,8 +165,8 @@ func (d *DataContainer) InitRepositories(ctx context.Context) error {
 // InitCommits initializes the branches of the repositories
 func (d *DataContainer) InitCommits(ctx context.Context) error {
 	d.Logger.Println("Fetching commits...")
-	fetchAllBranches := os.Getenv("ONLY_MAIN_BRANCH") != "true"
-	hiddenRepoInfo := os.Getenv("HIDE_REPO_INFO") == "true"
+	fetchAllBranches := !d.Config.OnlyMainBranch
+	hiddenRepoInfo := d.Config.HideRepoInfo
 	repoCount := len(d.Data.Repositories)
 	errChan := make(chan error, repoCount)
 	commitChan := make(chan []github.Commit, repoCount)
@@ -364,9 +366,10 @@ func (d *DataContainer) Build(ctx context.Context) error {
 }
 
 // NewDataContainer creates a new DataContainer
-func NewDataContainer(l *log.Logger, cm *ClientManager) *DataContainer {
+func NewDataContainer(l *log.Logger, cm *ClientManager, cfg *config.Config) *DataContainer {
 	return &DataContainer{
 		Logger:        l,
 		ClientManager: cm,
+		Config:        cfg,
 	}
 }
