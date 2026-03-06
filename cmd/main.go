@@ -7,6 +7,7 @@ import (
 	"os"
 	"strings"
 	"time"
+	_ "time/tzdata"
 
 	_ "github.com/joho/godotenv/autoload"
 	"github.com/thanhhaudev/github-stats/pkg/clock"
