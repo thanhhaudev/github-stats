@@ -82,8 +82,15 @@ func runGitCommand(hideRepoInfo bool, args ...string) error {
 
 		if err := cmd.Run(); err != nil {
 			// Sanitize error output before returning
-			sanitizedErr := strings.ReplaceAll(err.Error(), stdout.String(), "[output hidden]")
-			sanitizedErr = strings.ReplaceAll(sanitizedErr, stderr.String(), "[output hidden]")
+			sanitizedErr := err.Error()
+			if stdout.Len() > 0 {
+				sanitizedErr = strings.ReplaceAll(sanitizedErr, stdout.String(), "[output hidden]")
+			}
+
+			if stderr.Len() > 0 {
+				sanitizedErr = strings.ReplaceAll(sanitizedErr, stderr.String(), "[output hidden]")
+			}
+
 			return fmt.Errorf("failed to run git command: %v", sanitizedErr)
 		}
 	} else {
