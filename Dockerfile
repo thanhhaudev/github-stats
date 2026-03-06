@@ -11,6 +11,8 @@ RUN CGO_ENABLED=0 GOOS=linux go build -o /build/github-stats ./cmd
 # Runtime stage
 FROM alpine:latest
 
+RUN apk add --no-cache git
+
 WORKDIR /root
 COPY --from=builder /build/github-stats /root/github-stats
 RUN chmod +x /root/github-stats
