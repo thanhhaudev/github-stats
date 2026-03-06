@@ -153,12 +153,12 @@ type Language struct {
 }
 
 // NewGitHub creates a new GitHub
-func NewGitHub(token string) *GitHub {
+func NewGitHub(token string, debug bool) *GitHub {
 	if token == "" {
 		return nil
 	}
 
-	client := NewClient(token)
+	client := NewClient(token, debug)
 
 	return &GitHub{
 		Repositories: &RepositoryService{client},

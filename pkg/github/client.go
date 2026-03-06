@@ -14,6 +14,7 @@ const ApiEndpoint = "https://api.github.com"
 type Client struct {
 	token      string
 	origin     string
+	debug      bool
 	httpClient *http.Client
 }
 
@@ -123,8 +124,17 @@ func (c *Client) do(httpReq *http.Request, v interface{}) error {
 	if err := json.Unmarshal(body.Bytes(), &gqlResp); err == nil && len(gqlResp.Errors) > 0 {
 		var msgs []string
 		for _, e := range gqlResp.Errors {
-			msgs = append(msgs, e.Message)
+			msg := e.Message
+			if c.token != "" {
+				msg = strings.ReplaceAll(msg, c.token, "[output hidden]")
+			}
+			msgs = append(msgs, msg)
 		}
+
+		if !c.debug {
+			return fmt.Errorf("❌ could not fetch data from GitHub, please check your GitHub token")
+		}
+
 		return fmt.Errorf("github graphql error: %s", strings.Join(msgs, "; "))
 	}
 
@@ -132,10 +142,11 @@ func (c *Client) do(httpReq *http.Request, v interface{}) error {
 }
 
 // NewClient creates a new GitHub client
-func NewClient(token string) *Client {
+func NewClient(token string, debug bool) *Client {
 	return &Client{
 		token:      token,
 		origin:     ApiEndpoint,
+		debug:      debug,
 		httpClient: http.DefaultClient,
 	}
 }

@@ -58,6 +58,7 @@ type Config struct {
 
 	// Git settings
 	DryRun          bool
+	Debug           bool
 	CommitUserName  string
 	CommitUserEmail string
 	CommitMessage   string
@@ -96,6 +97,7 @@ func Load() *Config {
 
 		// Git settings
 		DryRun:          os.Getenv("DRY_RUN") == TrueVal,
+		Debug:           os.Getenv("DEBUG") == TrueVal,
 		CommitUserName:  os.Getenv("COMMIT_USER_NAME"),
 		CommitUserEmail: os.Getenv("COMMIT_USER_EMAIL"),
 		CommitMessage:   os.Getenv("COMMIT_MESSAGE"),
