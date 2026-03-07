@@ -48,9 +48,9 @@ func TestMakeCodingStreakList(t *testing.T) {
 					Text              string  `json:"text"`
 					Decimal           string  `json:"decimal"`
 					Digital           string  `json:"digital"`
-					DailyAverage      int     `json:"daily_average"`
+					DailyAverage      float64 `json:"daily_average"`
 					IsUpToDate        bool    `json:"is_up_to_date"`
-					PercentCalculated int     `json:"percent_calculated"`
+					PercentCalculated float64 `json:"percent_calculated"`
 					Range             struct {
 						Start     string `json:"start"`
 						StartDate string `json:"start_date"`
@@ -60,11 +60,11 @@ func TestMakeCodingStreakList(t *testing.T) {
 						EndText   string `json:"end_text"`
 						Timezone  string `json:"timezone"`
 					} `json:"range"`
-					Timeout int `json:"timeout"`
+					Timeout float64 `json:"timeout"`
 				}{
 					TotalSeconds: 4979819.370848,
 					Text:         "1,383 hrs 16 mins",
-					DailyAverage: 13437, // ~3.7 hours
+					DailyAverage: 13437.0, // ~3.7 hours
 					Range: struct {
 						Start     string `json:"start"`
 						StartDate string `json:"start_date"`
@@ -119,4 +119,3 @@ func TestMakeCodingStreakList(t *testing.T) {
 		})
 	}
 }
-

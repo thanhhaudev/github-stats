@@ -146,8 +146,9 @@ func MakeCodingStreakList(s *wakatime.AllTimeSinceTodayStats, currentStreak, lon
 	// show WakaTime data if available
 	if s != nil {
 		// calculate daily average hours and minutes
-		dailyAvgHours := s.Data.DailyAverage / 3600
-		dailyAvgMinutes := (s.Data.DailyAverage % 3600) / 60
+		dailyAvg := int(s.Data.DailyAverage)
+		dailyAvgHours := dailyAvg / 3600
+		dailyAvgMinutes := (dailyAvg % 3600) / 60
 
 		// parse start and end dates to calculate total days
 		startDate, _ := time.Parse("2006-01-02", s.Data.Range.StartDate)
@@ -156,7 +157,7 @@ func MakeCodingStreakList(s *wakatime.AllTimeSinceTodayStats, currentStreak, lon
 
 		var activeDays int
 		if s.Data.DailyAverage > 0 {
-			activeDays = int(s.Data.TotalSeconds / float64(s.Data.DailyAverage)) // calculate active days based on total seconds and daily average
+			activeDays = int(s.Data.TotalSeconds / s.Data.DailyAverage) // calculate active days based on total seconds and daily average
 		}
 
 		var consistencyPercent float64

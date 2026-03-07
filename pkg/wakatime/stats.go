@@ -36,14 +36,14 @@ type Stats struct {
 
 type AllTimeSinceTodayStats struct {
 	Data struct {
-		TotalSeconds    float64 `json:"total_seconds"`
-		Text            string  `json:"text"`
-		Decimal         string  `json:"decimal"`
-		Digital         string  `json:"digital"`
-		DailyAverage    int     `json:"daily_average"`
-		IsUpToDate      bool    `json:"is_up_to_date"`
-		PercentCalculated int   `json:"percent_calculated"`
-		Range           struct {
+		TotalSeconds      float64 `json:"total_seconds"`
+		Text              string  `json:"text"`
+		Decimal           string  `json:"decimal"`
+		Digital           string  `json:"digital"`
+		DailyAverage      float64 `json:"daily_average"`
+		IsUpToDate        bool    `json:"is_up_to_date"`
+		PercentCalculated float64 `json:"percent_calculated"`
+		Range             struct {
 			Start     string `json:"start"`
 			StartDate string `json:"start_date"`
 			StartText string `json:"start_text"`
@@ -52,7 +52,7 @@ type AllTimeSinceTodayStats struct {
 			EndText   string `json:"end_text"`
 			Timezone  string `json:"timezone"`
 		} `json:"range"`
-		Timeout int `json:"timeout"`
+		Timeout float64 `json:"timeout"`
 	} `json:"data"`
 }
 
