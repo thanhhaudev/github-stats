@@ -51,9 +51,8 @@ func (d *DataContainer) metrics(com *CommitStats, lang *LanguageStats) map[strin
 }
 
 // GetStats returns the statistics
-func (d *DataContainer) GetStats(cl clock.Clock) string {
-	d.Logger.Println("Creating statistics...")
-	b := strings.Builder{}
+func (d *DataContainer) GetStats(c clock.Clock) string {
+	res := strings.Builder{}
 
 	// show metrics based on the environment variable
 	w := d.metrics(d.CalculateCommits(), d.CalculateLanguages())
@@ -99,7 +98,9 @@ func (d *DataContainer) InitViewer(ctx context.Context) error {
 	}
 
 	d.Data.Viewer = v
-	d.Logger.Printf("Successfully fetched viewer: %s (ID: %s)\n", v.Login, v.ID)
+	if d.Config.Debug {
+		d.Logger.Printf("Successfully fetched viewer: %s (ID: %s)\n", d.Data.Viewer.Login, d.Data.Viewer.ID)
+	}
 
 	return nil
 }
@@ -188,24 +189,30 @@ func (d *DataContainer) InitCommits(ctx context.Context) error {
 	}
 
 	if hiddenRepoInfo {
-		d.Logger.Printf("Fetching commits from %d %s...", repoCount, func() string {
-			if repoCount == 1 {
-				return "repository"
-			}
-			return "repositories"
-		}())
+		if d.Config.Debug {
+			d.Logger.Printf("🔍 Fetching commits from %d %s...", repoCount, func() string {
+				if repoCount == 1 {
+					return "repository"
+				}
+				return "repositories"
+			}())
+		} else {
+			d.Logger.Println("🔍 Fetching commits from repositories...")
+		}
 	}
 
 	var wg sync.WaitGroup
 	semaphore := make(chan struct{}, 5) // Limit to 5 concurrent goroutines
 
-	for _, repo := range d.Data.Repositories {
+	for i, repo := range d.Data.Repositories {
 		wg.Add(1)
-		go func(repo github.Repository) {
+		go func(i int, repo github.Repository) {
 			defer wg.Done()
+			progress := fmt.Sprintf("[%d/%d]", i+1, repoCount)
+
 			if fetchAllBranches {
 				if !hiddenRepoInfo {
-					d.Logger.Println("Fetching commits from all branches of repository:", mask(repo.Name))
+					d.Logger.Printf("%s Fetching commits from all branches of: %s\n", progress, mask(repo.Name))
 				}
 
 				branches, err := d.ClientManager.GetBranches(ctx, repo.Owner.Login, repo.Name, branchPerQuery)
@@ -230,8 +237,8 @@ func (d *DataContainer) InitCommits(ctx context.Context) error {
 
 						mu.Lock()
 						allCommits = append(allCommits, commits...)
-						if !hiddenRepoInfo {
-							log.Printf("Fetched %d commits from branch %s of repository %s", len(commits), mask(branch.Name), mask(repo.Name))
+						if !hiddenRepoInfo && d.Config.Debug {
+							log.Printf("%s Fetched %d commits from branch %s", progress, len(commits), mask(branch.Name))
 						}
 						mu.Unlock()
 					}(branch)
@@ -241,7 +248,7 @@ func (d *DataContainer) InitCommits(ctx context.Context) error {
 				commitChan <- allCommits
 			} else {
 				if !hiddenRepoInfo {
-					d.Logger.Println("Fetching commits from the default branch of repository:", mask(repo.Name))
+					d.Logger.Printf("%s Fetching commits from default branch of: %s\n", progress, mask(repo.Name))
 				}
 
 				defaultBranch, err := d.ClientManager.GetDefaultBranch(ctx, repo.Owner.Login, repo.Name)
