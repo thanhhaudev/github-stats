@@ -52,7 +52,7 @@ func (d *DataContainer) metrics(com *CommitStats, lang *LanguageStats) map[strin
 
 // GetStats returns the statistics
 func (d *DataContainer) GetStats(c clock.Clock) string {
-	res := strings.Builder{}
+	b := strings.Builder{}
 
 	// show metrics based on the environment variable
 	w := d.metrics(d.CalculateCommits(), d.CalculateLanguages())
@@ -66,7 +66,7 @@ func (d *DataContainer) GetStats(c clock.Clock) string {
 	}
 
 	// Show last update time if enabled
-	showLastUpdated(cl, &b, d.Config)
+	showLastUpdated(c, &b, d.Config)
 
 	d.Logger.Println("Created statistics successfully")
 
@@ -267,7 +267,7 @@ func (d *DataContainer) InitCommits(ctx context.Context) error {
 			}
 
 			errChan <- nil
-		}(repo)
+		}(i, repo)
 	}
 
 	go func() {
