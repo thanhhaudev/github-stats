@@ -65,6 +65,12 @@ func main() {
 			logger.Fatalf("Error setting up git config: %v", err)
 		}
 
+		if cfg.EnableCache {
+			if err := verifyCacheNotPushable(cfg.CacheFile); err != nil {
+				logger.Fatalf("❌ Cache safety check failed: %v", err)
+			}
+		}
+
 		changed, err := hasReadmeChanged()
 		if err != nil {
 			logger.Fatalf("Error checking if README.md has changed: %v", err)
