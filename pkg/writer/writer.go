@@ -196,7 +196,7 @@ func MakeAIStatsList(aiAdd, humanAdd, inTokens, outTokens int64, avgPrompt float
 	fmt.Fprintf(&b, "👤 Written by Hand:        %s lines\n", addCommas(int(humanAdd)))
 	fmt.Fprintf(&b, "📊 AI Contribution:        %.1f%%\n", aiContribution)
 	fmt.Fprintf(&b, "🔤 Tokens In / Out:        %s / %s\n", humanizeCount(inTokens), humanizeCount(outTokens))
-	fmt.Fprintf(&b, "💬 Avg Prompt:             %d chars\n", int(math.Round(avgPrompt)))
+	fmt.Fprintf(&b, "💬 Average Prompt:         %d chars\n", int(math.Round(avgPrompt)))
 	b.WriteString("```\n\n")
 
 	return b.String()
