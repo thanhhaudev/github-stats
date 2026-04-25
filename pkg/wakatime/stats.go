@@ -21,6 +21,15 @@ type StatsItem struct {
 	Hours   int     `json:"hours"`
 	Minutes int     `json:"minutes"`
 	Seconds int     `json:"seconds"`
+
+	// AI attribution fields (populated on projects when the user has GenAI tooling integrated)
+	AIAdditions           int64   `json:"ai_additions"`
+	AIDeletions           int64   `json:"ai_deletions"`
+	HumanAdditions        int64   `json:"human_additions"`
+	HumanDeletions        int64   `json:"human_deletions"`
+	AIInputTokens         int64   `json:"ai_input_tokens"`
+	AIOutputTokens        int64   `json:"ai_output_tokens"`
+	AIAveragePromptLength float64 `json:"ai_average_prompt_length"`
 }
 
 type Stats struct {
@@ -79,7 +88,7 @@ const (
 func (s *StatsService) Get(ctx context.Context) (*Stats, error) {
 	var stats Stats
 
-	err := s.Client.GetWithContext(ctx, fmt.Sprintf("users/current/stats/%s", s.Range), nil, &stats)
+	err := s.GetWithContext(ctx, fmt.Sprintf("users/current/stats/%s", s.Range), nil, &stats)
 	if err != nil {
 		var wakaTimeErr *WakaTimeError
 		if errors.As(err, &wakaTimeErr) && wakaTimeErr.IsNotCompleted() {
@@ -98,7 +107,7 @@ func (s *StatsService) Get(ctx context.Context) (*Stats, error) {
 func (s *StatsService) GetAllTimeSinceToday(ctx context.Context) (*AllTimeSinceTodayStats, error) {
 	var stats AllTimeSinceTodayStats
 
-	err := s.Client.GetWithContext(ctx, "users/current/all_time_since_today", nil, &stats)
+	err := s.GetWithContext(ctx, "users/current/all_time_since_today", nil, &stats)
 	if err != nil {
 		var wakaTimeErr *WakaTimeError
 		if errors.As(err, &wakaTimeErr) && wakaTimeErr.IsNotCompleted() {

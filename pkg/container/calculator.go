@@ -25,6 +25,54 @@ type LanguageStats struct {
 	Languages      map[string][2]interface{}
 }
 
+// AIStats stores AI vs human attribution aggregated across WakaTime projects.
+// HasData is false when nothing meaningful was reported, signalling writers to
+// hide the block entirely (avoids rendering a section full of zeros).
+type AIStats struct {
+	AIAdditions     int64
+	AIDeletions     int64
+	HumanAdditions  int64
+	HumanDeletions  int64
+	AIInputTokens   int64
+	AIOutputTokens  int64
+	AvgPromptLength float64
+	HasData         bool
+}
+
+// CalculateAIStats aggregates AI attribution fields across all WakaTime projects.
+// Avg prompt length is weighted by ai_input_tokens — projects without AI prompts
+// (zero tokens) contribute nothing, preventing them from skewing the average.
+func (d *DataContainer) CalculateAIStats() *AIStats {
+	if d.Data.WakaTime == nil {
+		return &AIStats{}
+	}
+
+	var s AIStats
+	var weightedPromptSum float64
+	var promptWeight int64
+
+	for _, p := range d.Data.WakaTime.Data.Projects {
+		s.AIAdditions += p.AIAdditions
+		s.AIDeletions += p.AIDeletions
+		s.HumanAdditions += p.HumanAdditions
+		s.HumanDeletions += p.HumanDeletions
+		s.AIInputTokens += p.AIInputTokens
+		s.AIOutputTokens += p.AIOutputTokens
+
+		if p.AIInputTokens > 0 && p.AIAveragePromptLength > 0 {
+			weightedPromptSum += p.AIAveragePromptLength * float64(p.AIInputTokens)
+			promptWeight += p.AIInputTokens
+		}
+	}
+
+	if promptWeight > 0 {
+		s.AvgPromptLength = weightedPromptSum / float64(promptWeight)
+	}
+
+	s.HasData = s.AIAdditions > 0 || s.AIInputTokens > 0
+	return &s
+}
+
 // CalculateCommits calculates the number of commits per year and per day of the week
 // return commits per year, commits per day of the week
 func (d *DataContainer) CalculateCommits() *CommitStats {

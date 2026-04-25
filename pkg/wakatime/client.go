@@ -39,7 +39,7 @@ func (c *Client) do(req *http.Request, v interface{}) error {
 		return err
 	}
 
-	defer resp.Body.Close()
+	defer func() { _ = resp.Body.Close() }()
 
 	// ref: https://wakatime.com/developers
 	// 202 - Accepted: The request has been accepted for processing,

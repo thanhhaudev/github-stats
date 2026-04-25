@@ -16,6 +16,7 @@ const (
 	MetricCommitTimesOfDay  = "COMMIT_TIMES_OF_DAY"
 	MetricWakaTimeSpentTime = "WAKATIME_SPENT_TIME"
 	MetricCodingStreak      = "CODING_STREAK"
+	MetricWakaTimeAIStats   = "WAKATIME_AI_STATS"
 )
 
 // Valid data types for WAKATIME_DATA
@@ -115,7 +116,8 @@ func Load() *Config {
 	}
 
 	if ttl := os.Getenv("CACHE_TTL"); ttl != "" {
-		fmt.Sscanf(ttl, "%d", &cfg.CacheTTL)
+		// parse failure leaves CacheTTL at zero; applyDefaults() then fills the fallback
+		_, _ = fmt.Sscanf(ttl, "%d", &cfg.CacheTTL)
 	}
 
 	cfg.applyDefaults()
@@ -204,6 +206,7 @@ func (c *Config) Validate() error {
 		MetricCommitTimesOfDay,
 		MetricWakaTimeSpentTime,
 		MetricCodingStreak,
+		MetricWakaTimeAIStats,
 	}
 	for _, metric := range c.ShowMetrics {
 		trimmed := strings.TrimSpace(metric)
