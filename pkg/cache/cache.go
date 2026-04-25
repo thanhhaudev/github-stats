@@ -18,19 +18,22 @@ import (
 )
 
 // SchemaVersion bumps whenever the on-disk format changes incompatibly.
-// A mismatch causes Load to return a fresh empty cache.
-const SchemaVersion = 1
+// A mismatch causes Load to return a fresh empty cache (one slow run after upgrade).
+const SchemaVersion = 2
 
+// RepoEntry holds the minimum data needed to decide cache hit/miss and replay
+// a fetch result. We deliberately do NOT store the full Repository struct —
+// fields like IsPrivate, Languages, Owner, Name reduce blast radius if the
+// cache file ever leaks (e.g. accidental commit by the user).
 type RepoEntry struct {
-	Repo    github.Repository `json:"repo"`
-	Commits []github.Commit   `json:"commits"`
+	PushedAt time.Time       `json:"pushedAt"`
+	Commits  []github.Commit `json:"commits"`
 }
 
 type Cache struct {
 	Version        int                   `json:"version"`
 	CachedAt       time.Time             `json:"cachedAt"`
 	OnlyMainBranch bool                  `json:"onlyMainBranch"`
-	Viewer         *github.Viewer        `json:"viewer,omitempty"`
 	Repos          map[string]*RepoEntry `json:"repos"`
 
 	mu sync.Mutex
@@ -72,14 +75,14 @@ func Load(path string, onlyMainBranch bool) *Cache {
 }
 
 // Save writes the cache atomically (write to tmp + rename) to avoid leaving
-// a partial file if the process is killed mid-write.
+// a partial file if the process is killed mid-write. The mutex is held during
+// the marshal so concurrent Set/Prune from goroutines cannot race the encoder.
 func (c *Cache) Save(path string) error {
 	c.mu.Lock()
 	c.CachedAt = time.Now().UTC()
 	c.Version = SchemaVersion
-	c.mu.Unlock()
-
 	data, err := json.MarshalIndent(c, "", "  ")
+	c.mu.Unlock()
 	if err != nil {
 		return err
 	}
@@ -94,6 +97,10 @@ func (c *Cache) Save(path string) error {
 
 // Lookup returns cached commits when the repo's pushedAt has not advanced
 // past the cached value. A returned ok=false means the caller must fetch fresh.
+//
+// Note: pushedAt has 1-second granularity. A push that lands in the same
+// second as the cache write may be missed until the next run — acceptable
+// trade-off for a daily-cadence Action.
 func (c *Cache) Lookup(repoURL string, pushedAt time.Time) ([]github.Commit, bool) {
 	c.mu.Lock()
 	defer c.mu.Unlock()
@@ -103,8 +110,7 @@ func (c *Cache) Lookup(repoURL string, pushedAt time.Time) ([]github.Commit, boo
 		return nil, false
 	}
 
-	// pushedAt advances on any push; equal-or-older means nothing new
-	if pushedAt.After(entry.Repo.PushedAt) {
+	if pushedAt.After(entry.PushedAt) {
 		return nil, false
 	}
 
@@ -113,13 +119,17 @@ func (c *Cache) Lookup(repoURL string, pushedAt time.Time) ([]github.Commit, boo
 
 // Set stores fresh commits for a repo, overwriting any existing entry.
 // Safe to call concurrently from goroutines.
-func (c *Cache) Set(repoURL string, repo github.Repository, commits []github.Commit) {
+//
+// Cached commits are stored with their raw GraphQL UTC timestamps; timezone
+// conversion (ToClockTz) is re-applied downstream so a TIME_ZONE change
+// between runs does not require cache invalidation.
+func (c *Cache) Set(repoURL string, pushedAt time.Time, commits []github.Commit) {
 	c.mu.Lock()
 	defer c.mu.Unlock()
 
 	c.Repos[repoURL] = &RepoEntry{
-		Repo:    repo,
-		Commits: commits,
+		PushedAt: pushedAt,
+		Commits:  commits,
 	}
 }
 

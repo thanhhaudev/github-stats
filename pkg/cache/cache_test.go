@@ -1,6 +1,7 @@
 package cache
 
 import (
+	"bytes"
 	"encoding/json"
 	"os"
 	"path/filepath"
@@ -13,16 +14,6 @@ import (
 func tempCachePath(t *testing.T) string {
 	t.Helper()
 	return filepath.Join(t.TempDir(), "cache.json")
-}
-
-func sampleRepo(url string, pushed time.Time) github.Repository {
-	r := github.Repository{
-		Name:     "demo",
-		Url:      url,
-		PushedAt: pushed,
-	}
-	r.Owner.Login = "alice"
-	return r
 }
 
 func TestLoad_MissingFileReturnsEmpty(t *testing.T) {
@@ -59,11 +50,12 @@ func TestLoad_VersionMismatchReturnsEmpty(t *testing.T) {
 
 func TestLoad_OnlyMainBranchMismatchReturnsEmpty(t *testing.T) {
 	path := tempCachePath(t)
+	pushed := time.Now()
 	c := &Cache{
 		Version:        SchemaVersion,
 		OnlyMainBranch: true,
 		Repos: map[string]*RepoEntry{
-			"u1": {Repo: sampleRepo("u1", time.Now()), Commits: []github.Commit{{OID: "abc"}}},
+			"u1": {PushedAt: pushed, Commits: []github.Commit{{OID: "abc"}}},
 		},
 	}
 	if err := c.Save(path); err != nil {
@@ -95,11 +87,10 @@ func TestSaveLoadRoundTrip(t *testing.T) {
 	original := &Cache{
 		Version:        SchemaVersion,
 		OnlyMainBranch: false,
-		Viewer:         &github.Viewer{Login: "alice", ID: "id1"},
 		Repos: map[string]*RepoEntry{
 			"https://github.com/alice/demo": {
-				Repo:    sampleRepo("https://github.com/alice/demo", pushed),
-				Commits: []github.Commit{{OID: "abc", Additions: 10, Deletions: 2, CommittedDate: pushed}},
+				PushedAt: pushed,
+				Commits:  []github.Commit{{OID: "abc", Additions: 10, Deletions: 2, CommittedDate: pushed}},
 			},
 		},
 	}
@@ -110,18 +101,46 @@ func TestSaveLoadRoundTrip(t *testing.T) {
 
 	loaded := Load(path, false)
 
-	if loaded.Viewer == nil || loaded.Viewer.Login != "alice" {
-		t.Errorf("viewer not round-tripped: %+v", loaded.Viewer)
-	}
 	entry, ok := loaded.Repos["https://github.com/alice/demo"]
 	if !ok {
 		t.Fatal("repo entry missing after round-trip")
 	}
-	if !entry.Repo.PushedAt.Equal(pushed) {
-		t.Errorf("pushedAt mismatch: got %v want %v", entry.Repo.PushedAt, pushed)
+	if !entry.PushedAt.Equal(pushed) {
+		t.Errorf("pushedAt mismatch: got %v want %v", entry.PushedAt, pushed)
 	}
 	if len(entry.Commits) != 1 || entry.Commits[0].OID != "abc" {
 		t.Errorf("commits not round-tripped: %+v", entry.Commits)
+	}
+}
+
+func TestSaveLoadRoundTrip_DoesNotLeakRepoMetadata(t *testing.T) {
+	// Guard against accidentally re-introducing fields like IsPrivate or
+	// repo Name in the cache file. The schema must stay minimal so a leaked
+	// cache file does not expose private repo metadata.
+	path := tempCachePath(t)
+	c := &Cache{
+		Version: SchemaVersion,
+		Repos: map[string]*RepoEntry{
+			"https://github.com/alice/secret": {
+				PushedAt: time.Now(),
+				Commits:  []github.Commit{{OID: "x"}},
+			},
+		},
+	}
+	if err := c.Save(path); err != nil {
+		t.Fatal(err)
+	}
+
+	raw, err := os.ReadFile(path)
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	forbidden := []string{`"isPrivate"`, `"isFork"`, `"languages"`, `"primaryLanguage"`, `"owner"`, `"name"`, `"viewer"`}
+	for _, f := range forbidden {
+		if bytes.Contains(raw, []byte(f)) {
+			t.Errorf("cache file contains forbidden field %s — schema is leaking metadata", f)
+		}
 	}
 }
 
@@ -129,7 +148,7 @@ func TestLookup(t *testing.T) {
 	pushed := time.Date(2026, 4, 1, 12, 0, 0, 0, time.UTC)
 	c := &Cache{
 		Repos: map[string]*RepoEntry{
-			"u1": {Repo: sampleRepo("u1", pushed), Commits: []github.Commit{{OID: "x"}}},
+			"u1": {PushedAt: pushed, Commits: []github.Commit{{OID: "x"}}},
 		},
 	}
 
@@ -167,22 +186,23 @@ func TestSet_OverwritesExisting(t *testing.T) {
 	pushed1 := time.Date(2026, 4, 1, 0, 0, 0, 0, time.UTC)
 	pushed2 := pushed1.Add(time.Hour)
 
-	c.Set("u1", sampleRepo("u1", pushed1), []github.Commit{{OID: "old"}})
-	c.Set("u1", sampleRepo("u1", pushed2), []github.Commit{{OID: "new"}})
+	c.Set("u1", pushed1, []github.Commit{{OID: "old"}})
+	c.Set("u1", pushed2, []github.Commit{{OID: "new"}})
 
 	if c.Repos["u1"].Commits[0].OID != "new" {
 		t.Errorf("expected overwrite, got %+v", c.Repos["u1"].Commits)
 	}
-	if !c.Repos["u1"].Repo.PushedAt.Equal(pushed2) {
-		t.Errorf("expected pushedAt updated, got %v", c.Repos["u1"].Repo.PushedAt)
+	if !c.Repos["u1"].PushedAt.Equal(pushed2) {
+		t.Errorf("expected pushedAt updated, got %v", c.Repos["u1"].PushedAt)
 	}
 }
 
 func TestPrune_DropsMissingURLs(t *testing.T) {
+	now := time.Now()
 	c := &Cache{
 		Repos: map[string]*RepoEntry{
-			"keep": {Repo: sampleRepo("keep", time.Now())},
-			"drop": {Repo: sampleRepo("drop", time.Now())},
+			"keep": {PushedAt: now},
+			"drop": {PushedAt: now},
 		},
 	}
 
@@ -215,7 +235,7 @@ func TestSet_ConcurrentSafe(t *testing.T) {
 		go func(id int) {
 			defer func() { done <- struct{}{} }()
 			url := "u" + string(rune('a'+id%26))
-			c.Set(url, sampleRepo(url, pushed), []github.Commit{{OID: url}})
+			c.Set(url, pushed, []github.Commit{{OID: url}})
 			c.Lookup(url, pushed)
 		}(i)
 	}
@@ -223,4 +243,32 @@ func TestSet_ConcurrentSafe(t *testing.T) {
 		<-done
 	}
 	// no race detector violations is the test
+}
+
+func TestSave_RaceWithSet(t *testing.T) {
+	// Save must hold the mutex during marshal — otherwise concurrent Set
+	// will trigger "concurrent map write" panic from json.Marshal walking
+	// the map.
+	c := &Cache{Repos: make(map[string]*RepoEntry)}
+	path := tempCachePath(t)
+	pushed := time.Now()
+
+	stop := make(chan struct{})
+	go func() {
+		for {
+			select {
+			case <-stop:
+				return
+			default:
+				c.Set("u1", pushed, []github.Commit{{OID: "x"}})
+			}
+		}
+	}()
+
+	for i := 0; i < 20; i++ {
+		if err := c.Save(path); err != nil {
+			t.Fatalf("Save failed: %v", err)
+		}
+	}
+	close(stop)
 }

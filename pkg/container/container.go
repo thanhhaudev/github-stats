@@ -286,7 +286,10 @@ func (d *DataContainer) InitCommits(ctx context.Context) error {
 			}
 
 			if d.Cache != nil {
-				d.Cache.Set(repo.Url, repo, fetched)
+				// Store raw GraphQL UTC timestamps; ToClockTz is applied later in the
+				// dedup loop so a TIME_ZONE change between runs is honored without
+				// invalidating the cache.
+				d.Cache.Set(repo.Url, repo.PushedAt, fetched)
 			}
 			commitChan <- fetched
 			errChan <- nil
@@ -364,6 +367,26 @@ func (d *DataContainer) Build(ctx context.Context) error {
 		d.Logger.Printf("📦 Cache enabled (file=%s, entries=%d)", d.Config.CacheFile, len(d.Cache.Repos))
 	}
 
+	// Save cache via defer so a transient error in InitCommits or InitWakaStats
+	// does not throw away repo entries that were successfully refreshed earlier
+	// in the run. We only save once we have a populated repo list to prune
+	// against — saving with d.Data.Repositories empty would prune everything.
+	defer func() {
+		if d.Cache == nil || len(d.Data.Repositories) == 0 {
+			return
+		}
+		urls := make([]string, 0, len(d.Data.Repositories))
+		for _, r := range d.Data.Repositories {
+			urls = append(urls, r.Url)
+		}
+		d.Cache.Prune(urls)
+		if err := d.Cache.Save(d.Config.CacheFile); err != nil {
+			d.Logger.Printf("⚠️ Failed to save cache: %v", err)
+		} else {
+			d.Logger.Printf("📦 Cache saved (%d repos)", len(d.Cache.Repos))
+		}
+	}()
+
 	// if the GitHub client is not nil, initialize the viewer, repositories, and commits
 	if d.ClientManager.GitHubClient != nil {
 		d.Logger.Println("Fetching data from GitHub APIs...")
@@ -396,21 +419,6 @@ func (d *DataContainer) Build(ctx context.Context) error {
 		}
 
 		d.Logger.Println("Fetching data from Wakatime APIs successfully")
-	}
-
-	// Persist cache *after* a successful build so we never overwrite good data with partial state
-	if d.Cache != nil {
-		urls := make([]string, 0, len(d.Data.Repositories))
-		for _, r := range d.Data.Repositories {
-			urls = append(urls, r.Url)
-		}
-		d.Cache.Prune(urls)
-		d.Cache.Viewer = d.Data.Viewer
-		if err := d.Cache.Save(d.Config.CacheFile); err != nil {
-			d.Logger.Printf("⚠️ Failed to save cache: %v", err)
-		} else {
-			d.Logger.Printf("📦 Cache saved (%d repos)", len(d.Cache.Repos))
-		}
 	}
 
 	d.Logger.Println("Built data container successfully")
