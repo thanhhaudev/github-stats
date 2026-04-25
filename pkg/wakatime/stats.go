@@ -88,7 +88,7 @@ const (
 func (s *StatsService) Get(ctx context.Context) (*Stats, error) {
 	var stats Stats
 
-	err := s.Client.GetWithContext(ctx, fmt.Sprintf("users/current/stats/%s", s.Range), nil, &stats)
+	err := s.GetWithContext(ctx, fmt.Sprintf("users/current/stats/%s", s.Range), nil, &stats)
 	if err != nil {
 		var wakaTimeErr *WakaTimeError
 		if errors.As(err, &wakaTimeErr) && wakaTimeErr.IsNotCompleted() {
@@ -107,7 +107,7 @@ func (s *StatsService) Get(ctx context.Context) (*Stats, error) {
 func (s *StatsService) GetAllTimeSinceToday(ctx context.Context) (*AllTimeSinceTodayStats, error) {
 	var stats AllTimeSinceTodayStats
 
-	err := s.Client.GetWithContext(ctx, "users/current/all_time_since_today", nil, &stats)
+	err := s.GetWithContext(ctx, "users/current/all_time_since_today", nil, &stats)
 	if err != nil {
 		var wakaTimeErr *WakaTimeError
 		if errors.As(err, &wakaTimeErr) && wakaTimeErr.IsNotCompleted() {

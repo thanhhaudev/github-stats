@@ -279,7 +279,7 @@ func TestSanitizeError_PreservesErrorStructure(t *testing.T) {
 	}
 
 	// Should still be an error type
-	var err error = sanitized
+	var err = sanitized
 	if err == nil {
 		t.Error("sanitized error should still implement error interface")
 	}

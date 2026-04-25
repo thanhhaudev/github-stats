@@ -116,7 +116,8 @@ func Load() *Config {
 	}
 
 	if ttl := os.Getenv("CACHE_TTL"); ttl != "" {
-		fmt.Sscanf(ttl, "%d", &cfg.CacheTTL)
+		// parse failure leaves CacheTTL at zero; applyDefaults() then fills the fallback
+		_, _ = fmt.Sscanf(ttl, "%d", &cfg.CacheTTL)
 	}
 
 	cfg.applyDefaults()
