@@ -385,6 +385,7 @@ jobs:
 - On the next run, it queries each repo's `pushedAt` timestamp; if it hasn't changed, the action reuses cached commits and skips the API calls.
 - Cached repos that no longer exist (deleted, transferred) are pruned automatically.
 - The cache schema is versioned — schema upgrades invalidate the cache automatically.
+- Toggling `ONLY_MAIN_BRANCH` also invalidates the cache (the two modes return different commit sets, so reusing data across them would be incorrect).
 
 **Security:** GitHub Actions cache is scoped to the repo and requires authenticated access; it is **not** publicly readable even on public repositories. Workflows from forked PRs cannot access the cache (GitHub enforces this).
 
