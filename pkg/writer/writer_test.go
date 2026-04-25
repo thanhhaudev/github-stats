@@ -147,7 +147,7 @@ func TestMakeAIStatsList(t *testing.T) {
 				"Written by Hand:        0 lines",
 				"AI Contribution:        100.0%",
 				"Tokens In / Out:        120.0K / 350.0K",
-				"Avg Prompt:             142 chars",
+				"Average Prompt:         142 chars",
 			},
 		},
 		{
@@ -160,7 +160,7 @@ func TestMakeAIStatsList(t *testing.T) {
 			contains: []string{
 				"AI Contribution:        58.6%",
 				"Tokens In / Out:        1.2M / 3.4M",
-				"Avg Prompt:             142 chars",
+				"Average Prompt:         142 chars",
 			},
 		},
 		{

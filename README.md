@@ -208,7 +208,7 @@ Shows AI vs human coding attribution from WakaTime, aggregated across all your p
 👤 Written by Hand:        8,721 lines
 📊 AI Contribution:        58.6%
 🔤 Tokens In / Out:        1.2M / 3.4M
-💬 Avg Prompt:             142 chars
+💬 Average Prompt:         142 chars
 ```
 
 > 💡 **Note:** The block is hidden entirely when no AI activity is reported (no GenAI integration, or zero AI usage in the range), so you won't see a section full of zeros. `Avg Prompt Length` is weighted by `ai_input_tokens` across projects.
