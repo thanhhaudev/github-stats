@@ -5,6 +5,7 @@ import (
 	"fmt"
 	"os"
 	"os/exec"
+	"path/filepath"
 	"regexp"
 	"strings"
 )
@@ -128,4 +129,74 @@ func sanitizeError(err error, token, owner string) error {
 	errMsg = urlRegex.ReplaceAllString(errMsg, "[***]")
 
 	return fmt.Errorf("%s", errMsg)
+}
+
+// verifyCacheNotPushable returns an error when the cache file at cachePath
+// is at risk of being committed to the repository — either because it is
+// already tracked by git, or because it lives inside the repo without a
+// matching .gitignore rule. Returns nil when the file is missing, gitignored,
+// or located outside the repository (where git push cannot reach it).
+func verifyCacheNotPushable(cachePath string) error {
+	absCache, err := filepath.Abs(cachePath)
+	if err != nil {
+		return fmt.Errorf("failed to resolve cache file path: %v", err)
+	}
+
+	if _, err := os.Stat(absCache); os.IsNotExist(err) {
+		return nil
+	}
+
+	cacheDir := filepath.Dir(absCache)
+	rootCmd := exec.Command("git", "rev-parse", "--show-toplevel")
+	rootCmd.Dir = cacheDir
+	rootBytes, err := rootCmd.Output()
+	if err != nil {
+		// Cache file is not inside any git repository — git push cannot reach it.
+		return nil
+	}
+	repoRoot := strings.TrimSpace(string(rootBytes))
+
+	// Resolve symlinks on both sides before comparing — on macOS git returns
+	// /private/var/... while filepath.Abs may yield /var/... for the same dir.
+	resolvedRoot, err := filepath.EvalSymlinks(repoRoot)
+	if err != nil {
+		resolvedRoot = repoRoot
+	}
+	resolvedCache, err := filepath.EvalSymlinks(absCache)
+	if err != nil {
+		resolvedCache = absCache
+	}
+
+	rel, err := filepath.Rel(resolvedRoot, resolvedCache)
+	if err != nil || strings.HasPrefix(rel, "..") {
+		return nil
+	}
+
+	// Check 1: file already tracked? (catastrophic — gitignore won't help)
+	tracked := exec.Command("git", "ls-files", "--error-unmatch", rel)
+	tracked.Dir = repoRoot
+	if err := tracked.Run(); err == nil {
+		return fmt.Errorf(
+			"cache file '%s' is already tracked by git — repo metadata may have leaked to history.\n"+
+				"  To fix:\n"+
+				"    1. git rm --cached %s\n"+
+				"    2. Add '%s' to .gitignore\n"+
+				"    3. Commit the fix",
+			rel, rel, rel)
+	}
+
+	// Check 2: file gitignored? (-q: silent, exit code carries the answer)
+	ignored := exec.Command("git", "check-ignore", "-q", rel)
+	ignored.Dir = repoRoot
+	err = ignored.Run()
+	if err == nil {
+		return nil
+	}
+	if exitErr, ok := err.(*exec.ExitError); ok && exitErr.ExitCode() == 1 {
+		return fmt.Errorf(
+			"cache file '%s' exists in the workspace but is not in .gitignore.\n"+
+				"  Add this line to your repo's .gitignore:\n    %s",
+			rel, rel)
+	}
+	return fmt.Errorf("failed to check gitignore status for '%s': %v", rel, err)
 }
