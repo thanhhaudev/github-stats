@@ -16,6 +16,7 @@ const (
 	MetricCommitTimesOfDay  = "COMMIT_TIMES_OF_DAY"
 	MetricWakaTimeSpentTime = "WAKATIME_SPENT_TIME"
 	MetricCodingStreak      = "CODING_STREAK"
+	MetricWakaTimeAIStats   = "WAKATIME_AI_STATS"
 )
 
 // Valid data types for WAKATIME_DATA
@@ -204,6 +205,7 @@ func (c *Config) Validate() error {
 		MetricCommitTimesOfDay,
 		MetricWakaTimeSpentTime,
 		MetricCodingStreak,
+		MetricWakaTimeAIStats,
 	}
 	for _, metric := range c.ShowMetrics {
 		trimmed := strings.TrimSpace(metric)

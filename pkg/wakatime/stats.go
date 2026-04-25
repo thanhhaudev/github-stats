@@ -21,6 +21,15 @@ type StatsItem struct {
 	Hours   int     `json:"hours"`
 	Minutes int     `json:"minutes"`
 	Seconds int     `json:"seconds"`
+
+	// AI attribution fields (populated on projects when the user has GenAI tooling integrated)
+	AIAdditions           int64   `json:"ai_additions"`
+	AIDeletions           int64   `json:"ai_deletions"`
+	HumanAdditions        int64   `json:"human_additions"`
+	HumanDeletions        int64   `json:"human_deletions"`
+	AIInputTokens         int64   `json:"ai_input_tokens"`
+	AIOutputTokens        int64   `json:"ai_output_tokens"`
+	AIAveragePromptLength float64 `json:"ai_average_prompt_length"`
 }
 
 type Stats struct {
