@@ -3,6 +3,7 @@ package config
 import (
 	"fmt"
 	"os"
+	"path/filepath"
 	"strings"
 
 	"github.com/thanhhaudev/github-stats/pkg/wakatime"
@@ -139,6 +140,16 @@ func (c *Config) applyDefaults() {
 
 	if c.CacheFile == "" {
 		c.CacheFile = ".github-stats-cache.json"
+	}
+
+	// Anchor relative cache paths to GITHUB_WORKSPACE so the file lands at the
+	// same location actions/cache@v4 reads from on the host. Without this the
+	// Docker container's cwd silently diverges under non-default checkout layouts
+	// and the cache never persists between runs.
+	if !filepath.IsAbs(c.CacheFile) {
+		if ws := os.Getenv("GITHUB_WORKSPACE"); ws != "" {
+			c.CacheFile = filepath.Join(ws, c.CacheFile)
+		}
 	}
 }
 

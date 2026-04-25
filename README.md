@@ -378,6 +378,8 @@ jobs:
 
 **Security:** GitHub Actions cache is scoped to the repo and requires authenticated access; it is **not** publicly readable even on public repositories. Workflows from forked PRs cannot access the cache (GitHub enforces this).
 
+> ⚠️ **Add `.github-stats-cache.json` to your profile repository's `.gitignore`** to prevent accidentally committing the cache file. The cache contains repo URLs (including private ones) and commit metadata — fine inside GitHub's cache storage, but you don't want it ending up in your public profile repo's git history.
+
 **Trade-offs:**
 - Cache expires after 7 days of inactivity (GitHub policy).
 - The first run after a cache miss is as slow as today — caching only helps on subsequent runs.
