@@ -8,99 +8,99 @@ import (
 
 func TestSanitizeError(t *testing.T) {
 	tests := []struct {
-		name          string
-		err           error
-		token         string
-		owner         string
-		expectedParts []string // Parts that should be in the result
+		name           string
+		err            error
+		token          string
+		owner          string
+		expectedParts  []string // Parts that should be in the result
 		forbiddenParts []string // Parts that should NOT be in the result
 	}{
 		{
-			name:          "nil error returns nil",
-			err:           nil,
-			token:         "ghp_1234567890",
-			owner:         "testuser",
-			expectedParts: nil,
+			name:           "nil error returns nil",
+			err:            nil,
+			token:          "ghp_1234567890",
+			owner:          "testuser",
+			expectedParts:  nil,
 			forbiddenParts: nil,
 		},
 		{
-			name:          "token is redacted",
-			err:           errors.New("authentication failed with token ghp_1234567890"),
-			token:         "ghp_1234567890",
-			owner:         "testuser",
-			expectedParts: []string{"[***]"},
+			name:           "token is redacted",
+			err:            errors.New("authentication failed with token ghp_1234567890"),
+			token:          "ghp_1234567890",
+			owner:          "testuser",
+			expectedParts:  []string{"[***]"},
 			forbiddenParts: []string{"ghp_1234567890"},
 		},
 		{
-			name:          "owner/username is redacted",
-			err:           errors.New("failed to push to testuser/repo"),
-			token:         "ghp_1234567890",
-			owner:         "testuser",
-			expectedParts: []string{"[***]"},
+			name:           "owner/username is redacted",
+			err:            errors.New("failed to push to testuser/repo"),
+			token:          "ghp_1234567890",
+			owner:          "testuser",
+			expectedParts:  []string{"[***]"},
 			forbiddenParts: []string{"testuser"},
 		},
 		{
-			name:          "https URL is completely redacted",
-			err:           errors.New("failed to clone https://github.com/user/repo.git"),
-			token:         "",
-			owner:         "",
-			expectedParts: []string{"[***]"},
+			name:           "https URL is completely redacted",
+			err:            errors.New("failed to clone https://github.com/user/repo.git"),
+			token:          "",
+			owner:          "",
+			expectedParts:  []string{"[***]"},
 			forbiddenParts: []string{"https://github.com", "github.com", "/user/repo.git"},
 		},
 		{
-			name:          "http URL is completely redacted",
-			err:           errors.New("failed to fetch http://example.com/path/to/resource"),
-			token:         "",
-			owner:         "",
-			expectedParts: []string{"[***]"},
+			name:           "http URL is completely redacted",
+			err:            errors.New("failed to fetch http://example.com/path/to/resource"),
+			token:          "",
+			owner:          "",
+			expectedParts:  []string{"[***]"},
 			forbiddenParts: []string{"http://example.com", "example.com", "/path/to/resource"},
 		},
 		{
-			name:          "multiple URLs are redacted",
-			err:           errors.New("failed: https://github.com/repo1 and https://github.com/repo2"),
-			token:         "",
-			owner:         "",
-			expectedParts: []string{"[***]"},
+			name:           "multiple URLs are redacted",
+			err:            errors.New("failed: https://github.com/repo1 and https://github.com/repo2"),
+			token:          "",
+			owner:          "",
+			expectedParts:  []string{"[***]"},
 			forbiddenParts: []string{"github.com", "repo1", "repo2"},
 		},
 		{
-			name:          "URL with token in it is redacted",
-			err:           errors.New("failed to push to https://ghp_token123@github.com/user/repo.git"),
-			token:         "ghp_token123",
-			owner:         "user",
-			expectedParts: []string{"[***]"},
+			name:           "URL with token in it is redacted",
+			err:            errors.New("failed to push to https://ghp_token123@github.com/user/repo.git"),
+			token:          "ghp_token123",
+			owner:          "user",
+			expectedParts:  []string{"[***]"},
 			forbiddenParts: []string{"ghp_token123", "github.com", "user", "repo.git"},
 		},
 		{
-			name:          "complex error with token, owner, and URL",
-			err:           errors.New("git remote set-url failed for testuser: https://ghp_secret@github.com/testuser/myrepo.git"),
-			token:         "ghp_secret",
-			owner:         "testuser",
-			expectedParts: []string{"[***]"},
+			name:           "complex error with token, owner, and URL",
+			err:            errors.New("git remote set-url failed for testuser: https://ghp_secret@github.com/testuser/myrepo.git"),
+			token:          "ghp_secret",
+			owner:          "testuser",
+			expectedParts:  []string{"[***]"},
 			forbiddenParts: []string{"ghp_secret", "testuser", "github.com", "myrepo"},
 		},
 		{
-			name:          "error without sensitive data remains unchanged",
-			err:           errors.New("connection timeout"),
-			token:         "ghp_1234",
-			owner:         "user",
-			expectedParts: []string{"connection timeout"},
+			name:           "error without sensitive data remains unchanged",
+			err:            errors.New("connection timeout"),
+			token:          "ghp_1234",
+			owner:          "user",
+			expectedParts:  []string{"connection timeout"},
 			forbiddenParts: nil,
 		},
 		{
-			name:          "URL with query parameters is fully redacted",
-			err:           errors.New("failed: https://api.github.com/repos/user/repo?token=abc123"),
-			token:         "",
-			owner:         "",
-			expectedParts: []string{"[***]"},
+			name:           "URL with query parameters is fully redacted",
+			err:            errors.New("failed: https://api.github.com/repos/user/repo?token=abc123"),
+			token:          "",
+			owner:          "",
+			expectedParts:  []string{"[***]"},
 			forbiddenParts: []string{"api.github.com", "token=abc123", "user", "repo"},
 		},
 		{
-			name:          "empty token and owner still redacts URLs",
-			err:           errors.New("error with https://github.com/path"),
-			token:         "",
-			owner:         "",
-			expectedParts: []string{"[***]"},
+			name:           "empty token and owner still redacts URLs",
+			err:            errors.New("error with https://github.com/path"),
+			token:          "",
+			owner:          "",
+			expectedParts:  []string{"[***]"},
 			forbiddenParts: []string{"github.com"},
 		},
 	}
@@ -140,9 +140,6 @@ func TestSanitizeError(t *testing.T) {
 		})
 	}
 }
-
-
-
 
 func TestSanitizeError_EdgeCases(t *testing.T) {
 	tests := []struct {
@@ -298,7 +295,6 @@ func TestSanitizeError_PreservesErrorStructure(t *testing.T) {
 	}
 }
 
-
 // TestSanitizeError_OrderOfOperations tests that sanitization happens in the correct order
 func TestSanitizeError_OrderOfOperations(t *testing.T) {
 	// Test that token is replaced before URL regex runs
@@ -410,4 +406,3 @@ func TestSanitizeError_CaseSensitivity(t *testing.T) {
 		t.Errorf("expected at least one redaction, got: %s", resultMsg)
 	}
 }
-

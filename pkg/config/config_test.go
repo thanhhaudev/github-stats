@@ -23,11 +23,11 @@ func TestConfig_Validate(t *testing.T) {
 		{
 			name: "valid config with all settings",
 			config: &Config{
-				GitHubToken:    "ghp_test123",
-				WakaTimeAPIKey: "waka_test123",
-				WakaTimeRange:  "last_7_days",
-				WakaTimeData:   []string{"EDITORS", "LANGUAGES"},
-				ShowMetrics:    []string{"COMMIT_TIMES_OF_DAY", "LANGUAGE_PER_REPO"},
+				GitHubToken:        "ghp_test123",
+				WakaTimeAPIKey:     "waka_test123",
+				WakaTimeRange:      "last_7_days",
+				WakaTimeData:       []string{"EDITORS", "LANGUAGES"},
+				ShowMetrics:        []string{"COMMIT_TIMES_OF_DAY", "LANGUAGE_PER_REPO"},
 				ProgressBarVersion: "2",
 			},
 			wantErr: false,
@@ -133,4 +133,3 @@ func TestConfig_Validate(t *testing.T) {
 		})
 	}
 }
-
