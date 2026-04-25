@@ -38,7 +38,7 @@ func (d *DataContainer) metrics(com *CommitStats, lang *LanguageStats, ai *AISta
 	version := d.Config.ProgressBarVersion
 	aiBlock := ""
 	if ai != nil && ai.HasData {
-		aiBlock = writer.MakeAIStatsList(ai.AIAdditions, ai.HumanAdditions, ai.AIInputTokens, ai.AIOutputTokens, ai.AvgPromptLength)
+		aiBlock = writer.MakeAIStatsList(ai.AIAdditions, ai.HumanAdditions, ai.AIInputTokens, ai.AIOutputTokens, ai.PromptLength, ai.AvgPromptLength)
 	}
 	return map[string]string{
 		"LANGUAGE_PER_REPO":   writer.MakeLanguagePerRepoList(d.Data.Repositories, version),

@@ -178,7 +178,11 @@ func MakeCodingStreakList(s *wakatime.AllTimeSinceTodayStats, currentStreak, lon
 
 // MakeAIStatsList returns a summary of AI vs human coding attribution from WakaTime.
 // Returns an empty string when there is no AI activity to display, so the block is hidden entirely.
-func MakeAIStatsList(aiAdd, humanAdd, inTokens, outTokens int64, avgPrompt float64) string {
+//
+// The "Average Prompt" row prefers avgPrompt (doc-defined ai_average_prompt_length) and
+// falls back to promptLength (ai_prompt_length) while the avg field is missing in API
+// responses. The row is omitted when neither value is populated.
+func MakeAIStatsList(aiAdd, humanAdd, inTokens, outTokens, promptLength int64, avgPrompt float64) string {
 	if aiAdd == 0 && inTokens == 0 {
 		return ""
 	}
@@ -189,6 +193,19 @@ func MakeAIStatsList(aiAdd, humanAdd, inTokens, outTokens int64, avgPrompt float
 		aiContribution = float64(aiAdd) / float64(totalAdd) * 100
 	}
 
+	// TODO(wakatime-api): drop the promptLength fallback once WakaTime ships
+	// ai_average_prompt_length at top-level. Today's API returns only ai_prompt_length
+	// (a raw total, not an average), so we display the total under the "Average Prompt"
+	// label as a stop-gap. When avgPrompt becomes non-zero, this branch becomes unreachable
+	// in practice and the whole switch can collapse to a single avgPrompt assignment.
+	var promptValue int64
+	switch {
+	case avgPrompt > 0:
+		promptValue = int64(math.Round(avgPrompt))
+	case promptLength > 0:
+		promptValue = promptLength
+	}
+
 	var b strings.Builder
 	b.WriteString("**🤖 My AI Footprint**\n\n")
 	b.WriteString("```text\n")
@@ -196,7 +213,9 @@ func MakeAIStatsList(aiAdd, humanAdd, inTokens, outTokens int64, avgPrompt float
 	fmt.Fprintf(&b, "👤 Written by Hand:        %s lines\n", addCommas(int(humanAdd)))
 	fmt.Fprintf(&b, "📊 AI Contribution:        %.1f%%\n", aiContribution)
 	fmt.Fprintf(&b, "🔤 Tokens In / Out:        %s / %s\n", humanizeCount(inTokens), humanizeCount(outTokens))
-	fmt.Fprintf(&b, "💬 Average Prompt:         %d chars\n", int(math.Round(avgPrompt)))
+	if promptValue > 0 {
+		fmt.Fprintf(&b, "💬 Average Prompt:         %s chars\n", humanizeCount(promptValue))
+	}
 	b.WriteString("```\n\n")
 
 	return b.String()
