@@ -213,6 +213,16 @@ Shows AI vs human coding attribution from WakaTime, aggregated across all your p
 
 > 💡 **Note:** The block is hidden entirely when no AI activity is reported (no GenAI integration, or zero AI usage in the range), so you won't see a section full of zeros. `Avg Prompt Length` is weighted by `ai_input_tokens` across projects.
 
+The title adapts to `WAKATIME_RANGE` so the timeframe is clear at a glance:
+
+| `WAKATIME_RANGE` | Title |
+| --- | --- |
+| `last_7_days` | **🤖 My Week in AI** |
+| `last_30_days` | **🤖 My Month in AI** |
+| `last_6_months` | **🤖 My 6 Months in AI** |
+| `last_year` | **🤖 My Year in AI** |
+| `all_time` (default) | **🤖 My AI Footprint** |
+
 ### ⏱️ `WAKATIME_SPENT_TIME`
 
 Shows detailed coding activity from WakaTime (requires WakaTime API key).
