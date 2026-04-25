@@ -34,8 +34,12 @@ type DataContainer struct {
 }
 
 // metrics returns the metrics map
-func (d *DataContainer) metrics(com *CommitStats, lang *LanguageStats) map[string]string {
+func (d *DataContainer) metrics(com *CommitStats, lang *LanguageStats, ai *AIStats) map[string]string {
 	version := d.Config.ProgressBarVersion
+	aiBlock := ""
+	if ai != nil && ai.HasData {
+		aiBlock = writer.MakeAIStatsList(ai.AIAdditions, ai.HumanAdditions, ai.AIInputTokens, ai.AIOutputTokens, ai.AvgPromptLength)
+	}
 	return map[string]string{
 		"LANGUAGE_PER_REPO":   writer.MakeLanguagePerRepoList(d.Data.Repositories, version),
 		"LANGUAGES_AND_TOOLS": writer.MakeLanguageAndToolList(lang.Languages, lang.TotalSize),
@@ -46,7 +50,8 @@ func (d *DataContainer) metrics(com *CommitStats, lang *LanguageStats) map[strin
 			d.Config.WakaTimeData,
 			version,
 		),
-		"CODING_STREAK": writer.MakeCodingStreakList(d.Data.WakaTimeAllTime, com.CurrentStreak, com.LongestStreak),
+		"CODING_STREAK":     writer.MakeCodingStreakList(d.Data.WakaTimeAllTime, com.CurrentStreak, com.LongestStreak),
+		"WAKATIME_AI_STATS": aiBlock,
 	}
 }
 
@@ -55,7 +60,7 @@ func (d *DataContainer) GetStats(c clock.Clock) string {
 	b := strings.Builder{}
 
 	// show metrics based on the environment variable
-	w := d.metrics(d.CalculateCommits(), d.CalculateLanguages())
+	w := d.metrics(d.CalculateCommits(), d.CalculateLanguages(), d.CalculateAIStats())
 	for _, k := range d.Config.ShowMetrics {
 		v, ok := w[k]
 		if !ok {
