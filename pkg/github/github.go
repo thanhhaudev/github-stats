@@ -13,6 +13,7 @@ var Queries = map[string]string{
 			url
 			isPrivate
 			isFork
+			pushedAt
 			primaryLanguage {
 				name
 			}
@@ -48,6 +49,7 @@ var Queries = map[string]string{
 				url
 				isPrivate
 				isFork
+				pushedAt
 				primaryLanguage {
 					name
 				}

@@ -73,7 +73,6 @@ type Config struct {
 
 	// Cache settings
 	EnableCache bool
-	CacheTTL    int // in hours
 	CacheFile   string
 }
 
@@ -115,11 +114,6 @@ func Load() *Config {
 		CacheFile:   os.Getenv("CACHE_FILE"),
 	}
 
-	if ttl := os.Getenv("CACHE_TTL"); ttl != "" {
-		// parse failure leaves CacheTTL at zero; applyDefaults() then fills the fallback
-		_, _ = fmt.Sscanf(ttl, "%d", &cfg.CacheTTL)
-	}
-
 	cfg.applyDefaults()
 
 	return cfg
@@ -145,10 +139,6 @@ func (c *Config) applyDefaults() {
 
 	if c.CacheFile == "" {
 		c.CacheFile = ".github-stats-cache.json"
-	}
-
-	if c.CacheTTL == 0 {
-		c.CacheTTL = 2 // Default to 2 hours
 	}
 }
 

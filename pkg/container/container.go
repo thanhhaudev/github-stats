@@ -7,6 +7,7 @@ import (
 	"strings"
 	"sync"
 
+	"github.com/thanhhaudev/github-stats/pkg/cache"
 	"github.com/thanhhaudev/github-stats/pkg/clock"
 	"github.com/thanhhaudev/github-stats/pkg/config"
 	"github.com/thanhhaudev/github-stats/pkg/github"
@@ -24,6 +25,7 @@ type DataContainer struct {
 	ClientManager *ClientManager
 	Logger        *log.Logger
 	Config        *config.Config
+	Cache         *cache.Cache // nil when caching is disabled
 	Data          struct {
 		Viewer          *github.Viewer
 		Repositories    []github.Repository
@@ -215,6 +217,20 @@ func (d *DataContainer) InitCommits(ctx context.Context) error {
 			defer wg.Done()
 			progress := fmt.Sprintf("[%d/%d]", i+1, repoCount)
 
+			// Skip the network round-trip when this repo has not been pushed to since the cached snapshot
+			if d.Cache != nil {
+				if cached, ok := d.Cache.Lookup(repo.Url, repo.PushedAt); ok {
+					if !hiddenRepoInfo {
+						d.Logger.Printf("%s Reusing %d cached commits: %s\n", progress, len(cached), mask(repo.Name))
+					}
+					commitChan <- cached
+					errChan <- nil
+					return
+				}
+			}
+
+			var fetched []github.Commit
+
 			if fetchAllBranches {
 				if !hiddenRepoInfo {
 					d.Logger.Printf("%s Fetching commits from all branches of: %s\n", progress, mask(repo.Name))
@@ -227,7 +243,6 @@ func (d *DataContainer) InitCommits(ctx context.Context) error {
 				}
 
 				var branchWg sync.WaitGroup
-				var allCommits []github.Commit
 				for _, branch := range branches {
 					branchWg.Add(1)
 					semaphore <- struct{}{} // Acquire a slot
@@ -241,7 +256,7 @@ func (d *DataContainer) InitCommits(ctx context.Context) error {
 						}
 
 						mu.Lock()
-						allCommits = append(allCommits, commits...)
+						fetched = append(fetched, commits...)
 						if !hiddenRepoInfo && d.Config.Debug {
 							log.Printf("%s Fetched %d commits from branch %s", progress, len(commits), mask(branch.Name))
 						}
@@ -250,7 +265,6 @@ func (d *DataContainer) InitCommits(ctx context.Context) error {
 				}
 
 				branchWg.Wait()
-				commitChan <- allCommits
 			} else {
 				if !hiddenRepoInfo {
 					d.Logger.Printf("%s Fetching commits from default branch of: %s\n", progress, mask(repo.Name))
@@ -268,9 +282,13 @@ func (d *DataContainer) InitCommits(ctx context.Context) error {
 					return
 				}
 
-				commitChan <- commits
+				fetched = commits
 			}
 
+			if d.Cache != nil {
+				d.Cache.Set(repo.Url, repo, fetched)
+			}
+			commitChan <- fetched
 			errChan <- nil
 		}(i, repo)
 	}
@@ -341,6 +359,11 @@ func (d *DataContainer) InitWakaStats(ctx context.Context) error {
 func (d *DataContainer) Build(ctx context.Context) error {
 	d.Logger.Println("Building data container...")
 
+	if d.Config.EnableCache {
+		d.Cache = cache.Load(d.Config.CacheFile, d.Config.OnlyMainBranch)
+		d.Logger.Printf("📦 Cache enabled (file=%s, entries=%d)", d.Config.CacheFile, len(d.Cache.Repos))
+	}
+
 	// if the GitHub client is not nil, initialize the viewer, repositories, and commits
 	if d.ClientManager.GitHubClient != nil {
 		d.Logger.Println("Fetching data from GitHub APIs...")
@@ -373,6 +396,21 @@ func (d *DataContainer) Build(ctx context.Context) error {
 		}
 
 		d.Logger.Println("Fetching data from Wakatime APIs successfully")
+	}
+
+	// Persist cache *after* a successful build so we never overwrite good data with partial state
+	if d.Cache != nil {
+		urls := make([]string, 0, len(d.Data.Repositories))
+		for _, r := range d.Data.Repositories {
+			urls = append(urls, r.Url)
+		}
+		d.Cache.Prune(urls)
+		d.Cache.Viewer = d.Data.Viewer
+		if err := d.Cache.Save(d.Config.CacheFile); err != nil {
+			d.Logger.Printf("⚠️ Failed to save cache: %v", err)
+		} else {
+			d.Logger.Printf("📦 Cache saved (%d repos)", len(d.Cache.Repos))
+		}
 	}
 
 	d.Logger.Println("Built data container successfully")
