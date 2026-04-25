@@ -104,65 +104,73 @@ func TestCalculateStreaks(t *testing.T) {
 	}
 }
 
-func newAIStatsContainer(projects []wakatime.StatsItem) *DataContainer {
+func newAIStatsContainer(stats *wakatime.Stats) *DataContainer {
 	d := NewDataContainer(log.Default(), &ClientManager{}, &config.Config{})
-	if projects != nil {
-		d.Data.WakaTime = &wakatime.Stats{}
-		d.Data.WakaTime.Data.Projects = projects
+	if stats != nil {
+		d.Data.WakaTime = stats
 	}
 	return d
 }
 
+func aiStats(setup func(s *wakatime.Stats)) *wakatime.Stats {
+	s := &wakatime.Stats{}
+	setup(s)
+	return s
+}
+
 func TestCalculateAIStats(t *testing.T) {
 	tests := []struct {
-		name     string
-		projects []wakatime.StatsItem
-		want     AIStats
+		name  string
+		stats *wakatime.Stats
+		want  AIStats
 	}{
 		{
-			name:     "no wakatime data",
-			projects: nil,
-			want:     AIStats{},
+			name:  "no wakatime data",
+			stats: nil,
+			want:  AIStats{},
 		},
 		{
-			name:     "wakatime present but no AI activity",
-			projects: []wakatime.StatsItem{{Name: "proj"}},
-			want:     AIStats{},
+			name:  "wakatime present but no AI activity",
+			stats: aiStats(func(s *wakatime.Stats) {}),
+			want:  AIStats{},
 		},
 		{
-			name: "aggregates additions and tokens across projects",
-			projects: []wakatime.StatsItem{
-				{Name: "alpha", AIAdditions: 100, HumanAdditions: 50, AIInputTokens: 1000, AIOutputTokens: 2000, AIAveragePromptLength: 100},
-				{Name: "beta", AIAdditions: 200, HumanAdditions: 150, AIInputTokens: 3000, AIOutputTokens: 4000, AIAveragePromptLength: 200},
-			},
+			name: "reads top-level totals including doc-compliant avg prompt",
+			stats: aiStats(func(s *wakatime.Stats) {
+				s.Data.AIAdditions = 300
+				s.Data.HumanAdditions = 200
+				s.Data.AIInputTokens = 4000
+				s.Data.AIOutputTokens = 6000
+				s.Data.AIAvgPromptLength = 175
+			}),
 			want: AIStats{
 				AIAdditions:     300,
 				HumanAdditions:  200,
 				AIInputTokens:   4000,
 				AIOutputTokens:  6000,
-				AvgPromptLength: (100*1000 + 200*3000) / 4000.0, // 175
+				AvgPromptLength: 175,
 				HasData:         true,
 			},
 		},
 		{
-			name: "skips projects with zero ai_input_tokens for prompt-length avg",
-			projects: []wakatime.StatsItem{
-				{Name: "with-ai", AIAdditions: 10, AIInputTokens: 500, AIAveragePromptLength: 80},
-				{Name: "no-ai", HumanAdditions: 100, AIAveragePromptLength: 9999}, // bogus, should be ignored
-			},
+			name: "exposes raw ai_prompt_length when avg field is missing",
+			stats: aiStats(func(s *wakatime.Stats) {
+				s.Data.AIAdditions = 10
+				s.Data.AIInputTokens = 500
+				s.Data.AIPromptLength = 484803
+			}),
 			want: AIStats{
-				AIAdditions:     10,
-				HumanAdditions:  100,
-				AIInputTokens:   500,
-				AvgPromptLength: 80,
-				HasData:         true,
+				AIAdditions:   10,
+				AIInputTokens: 500,
+				PromptLength:  484803,
+				HasData:       true,
 			},
 		},
 		{
 			name: "AI additions without tokens still triggers HasData",
-			projects: []wakatime.StatsItem{
-				{Name: "p", AIAdditions: 5},
-			},
+			stats: aiStats(func(s *wakatime.Stats) {
+				s.Data.AIAdditions = 5
+			}),
 			want: AIStats{
 				AIAdditions: 5,
 				HasData:     true,
@@ -172,7 +180,7 @@ func TestCalculateAIStats(t *testing.T) {
 
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			d := newAIStatsContainer(tt.projects)
+			d := newAIStatsContainer(tt.stats)
 			got := d.CalculateAIStats()
 
 			if got.AIAdditions != tt.want.AIAdditions {
@@ -189,6 +197,9 @@ func TestCalculateAIStats(t *testing.T) {
 			}
 			if math.Abs(got.AvgPromptLength-tt.want.AvgPromptLength) > 0.001 {
 				t.Errorf("AvgPromptLength: got %v, want %v", got.AvgPromptLength, tt.want.AvgPromptLength)
+			}
+			if got.PromptLength != tt.want.PromptLength {
+				t.Errorf("PromptLength: got %d, want %d", got.PromptLength, tt.want.PromptLength)
 			}
 			if got.HasData != tt.want.HasData {
 				t.Errorf("HasData: got %v, want %v", got.HasData, tt.want.HasData)
