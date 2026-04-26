@@ -165,9 +165,9 @@ func TestMakeAIStatsList(t *testing.T) {
 			contains: []string{
 				"AI Contribution:        58.6%",
 				"Tokens In / Out:        1.2M / 3.4M",
-				"Total Prompt Chars:     484.8K chars",
+				"Total Prompt Chars:     484.8K\n",
 			},
-			notContains: []string{"Average Prompt:"},
+			notContains: []string{"Average Prompt:", "484.8K chars"},
 		},
 		{
 			name:      "small token counts use addCommas; prompt row hidden when both zero",
