@@ -2,6 +2,9 @@ package main
 
 import (
 	"errors"
+	"os"
+	"os/exec"
+	"path/filepath"
 	"strings"
 	"testing"
 )
@@ -404,5 +407,100 @@ func TestSanitizeError_CaseSensitivity(t *testing.T) {
 	expectedCount := strings.Count(resultMsg, "[***]")
 	if expectedCount == 0 {
 		t.Errorf("expected at least one redaction, got: %s", resultMsg)
+	}
+}
+
+func setupTestRepo(t *testing.T) string {
+	t.Helper()
+	dir := t.TempDir()
+
+	for _, args := range [][]string{
+		{"init", "-q", dir},
+		{"-C", dir, "config", "user.email", "test@example.com"},
+		{"-C", dir, "config", "user.name", "test"},
+		{"-C", dir, "config", "commit.gpgsign", "false"},
+	} {
+		if out, err := exec.Command("git", args...).CombinedOutput(); err != nil {
+			t.Fatalf("git %v failed: %v: %s", args, err, out)
+		}
+	}
+	return dir
+}
+
+func TestVerifyCacheNotPushable_FileMissing(t *testing.T) {
+	dir := setupTestRepo(t)
+	path := filepath.Join(dir, "absent-cache.json")
+
+	if err := verifyCacheNotPushable(path); err != nil {
+		t.Errorf("expected nil for missing file, got %v", err)
+	}
+}
+
+func TestVerifyCacheNotPushable_GitignoredFileIsSafe(t *testing.T) {
+	dir := setupTestRepo(t)
+	path := filepath.Join(dir, "cache.json")
+	if err := os.WriteFile(path, []byte("{}"), 0644); err != nil {
+		t.Fatal(err)
+	}
+	if err := os.WriteFile(filepath.Join(dir, ".gitignore"), []byte("cache.json\n"), 0644); err != nil {
+		t.Fatal(err)
+	}
+
+	if err := verifyCacheNotPushable(path); err != nil {
+		t.Errorf("expected nil for gitignored file, got %v", err)
+	}
+}
+
+func TestVerifyCacheNotPushable_NotIgnoredFails(t *testing.T) {
+	dir := setupTestRepo(t)
+	path := filepath.Join(dir, "cache.json")
+	if err := os.WriteFile(path, []byte("{}"), 0644); err != nil {
+		t.Fatal(err)
+	}
+
+	err := verifyCacheNotPushable(path)
+	if err == nil {
+		t.Fatal("expected error when cache file is not gitignored, got nil")
+	}
+	if !strings.Contains(err.Error(), "not in .gitignore") {
+		t.Errorf("expected error mentioning .gitignore, got: %v", err)
+	}
+}
+
+func TestVerifyCacheNotPushable_TrackedFails(t *testing.T) {
+	dir := setupTestRepo(t)
+	path := filepath.Join(dir, "cache.json")
+	if err := os.WriteFile(path, []byte("{}"), 0644); err != nil {
+		t.Fatal(err)
+	}
+
+	for _, args := range [][]string{
+		{"-C", dir, "add", "cache.json"},
+		{"-C", dir, "commit", "-q", "-m", "init"},
+	} {
+		if out, err := exec.Command("git", args...).CombinedOutput(); err != nil {
+			t.Fatalf("git %v failed: %v: %s", args, err, out)
+		}
+	}
+
+	err := verifyCacheNotPushable(path)
+	if err == nil {
+		t.Fatal("expected error when cache file is tracked, got nil")
+	}
+	if !strings.Contains(err.Error(), "already tracked") {
+		t.Errorf("expected error mentioning tracking, got: %v", err)
+	}
+}
+
+func TestVerifyCacheNotPushable_OutsideRepoIsSafe(t *testing.T) {
+	// File outside any git repo — git push cannot reach it, no risk.
+	tmpDir := t.TempDir()
+	path := filepath.Join(tmpDir, "cache.json")
+	if err := os.WriteFile(path, []byte("{}"), 0644); err != nil {
+		t.Fatal(err)
+	}
+
+	if err := verifyCacheNotPushable(path); err != nil {
+		t.Errorf("expected nil for cache outside any repo, got %v", err)
 	}
 }

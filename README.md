@@ -301,6 +301,8 @@ Linux                    6 hrs  3 mins       ████░░░░░░░�
 | `PROGRESS_BAR_VERSION`        | Progress bar style: `1` (blocks) or `2` (emoji squares)                                          | ❌ No                   | `1`                         |
 | `SIMPLIFY_COMMIT_TIMES_TITLE` | Show simplified title: "I'm An Early 🐤" or "I'm A Night 🦉"                                     | ❌ No                   | `false`                     |
 | `HIDE_REPO_INFO`              | Hide repository information in action logs                                                       | ❌ No                   | `false`                     |
+| `ENABLE_CACHE`                | Skip re-fetching commits for repos unchanged since the last run (requires `actions/cache@v4`)    | ❌ No                   | `false`                     |
+| `CACHE_FILE`                  | Cache file path (must match the path in `actions/cache@v4`)                                      | ❌ No                   | `.github-stats-cache.json`  |
 
 ### 🎨 Progress Bar Styles
 
@@ -347,6 +349,122 @@ env:
   EXCLUDE_FORK_REPOS: "true"  # Skip forked repositories
   HIDE_REPO_INFO: "true"  # Cleaner logs
 ```
+
+### 📦 Caching (for users with many repositories)
+
+If you have many repositories, the action may approach the GitHub API rate limit. Enable caching to skip re-fetching commits for repos that have not been pushed to since the last run.
+
+Add the `actions/cache@v4` step **before** this action and set `ENABLE_CACHE: "true"`:
+
+```yaml
+jobs:
+  update-readme:
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Restore cache
+        uses: actions/cache@v4
+        with:
+          path: .github-stats-cache.json
+          key: github-stats-${{ github.run_id }}
+          restore-keys: github-stats-
+
+      - name: Update Stats
+        uses: thanhhaudev/github-stats@master
+        env:
+          GITHUB_TOKEN: ${{ secrets.GH_TOKEN }}
+          SHOW_METRICS: "COMMIT_TIMES_OF_DAY,LANGUAGE_PER_REPO"
+          ENABLE_CACHE: "true"
+```
+
+**How it works:**
+- The action stores fetched repo metadata + commits in `.github-stats-cache.json`.
+- On the next run, it queries each repo's `pushedAt` timestamp; if it hasn't changed, the action reuses cached commits and skips the API calls.
+- Cached repos that no longer exist (deleted, transferred) are pruned automatically.
+- The cache schema is versioned — schema upgrades invalidate the cache automatically.
+- Toggling `ONLY_MAIN_BRANCH` also invalidates the cache (the two modes return different commit sets, so reusing data across them would be incorrect).
+
+**Security:** GitHub Actions cache is scoped to the repo and requires authenticated access; it is **not** publicly readable even on public repositories. Workflows from forked PRs cannot access the cache (GitHub enforces this).
+
+> ⚠️ **Add `.github-stats-cache.json` to your profile repository's `.gitignore`** to prevent accidentally committing the cache file. The cache contains repo URLs (including private ones) and commit metadata — fine inside GitHub's cache storage, but you don't want it ending up in your public profile repo's git history.
+
+**Trade-offs:**
+- Cache expires after 7 days of inactivity (GitHub policy).
+- The first run after a cache miss is as slow as today — caching only helps on subsequent runs.
+- WakaTime stats are not cached (they're aggregates over a time range, not incrementally fetchable).
+
+### ⏱️ Running Frequently (every 5 min – every hour)
+
+If you want fresh stats and plan to run the action more often than once per day, the bottlenecks are **not** the GitHub API (caching handles that) — they are README commit spam, WakaTime rate limits, and concurrent run conflicts.
+
+**Recommended configuration for continuous runs:**
+
+```yaml
+name: Update README Stats
+
+on:
+  schedule:
+    - cron: '0 * * * *'   # hourly (GitHub Actions cron minimum is ~5 minutes)
+  workflow_dispatch:
+
+concurrency:
+  group: github-stats
+  cancel-in-progress: false  # serialize overlapping runs instead of running them in parallel
+
+jobs:
+  update-readme:
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Restore cache
+        uses: actions/cache@v4
+        with:
+          path: .github-stats-cache.json
+          key: github-stats-${{ github.run_id }}
+          restore-keys: github-stats-
+
+      - name: Update Stats
+        uses: thanhhaudev/github-stats@master
+        env:
+          GITHUB_TOKEN: ${{ secrets.GH_TOKEN }}
+          WAKATIME_API_KEY: ${{ secrets.WAKATIME_API_KEY }}
+          SHOW_METRICS: "COMMIT_TIMES_OF_DAY,LANGUAGE_PER_REPO,CODING_STREAK"
+          ENABLE_CACHE: "true"
+          SHOW_LAST_UPDATE: "false"   # critical for frequent runs — see below
+          HIDE_REPO_INFO: "true"
+```
+
+**Why each setting matters:**
+
+| Setting | Why |
+|---|---|
+| `concurrency.group` | If two runs overlap (long run still going when cron fires), GitHub will queue the second instead of running both. Avoids race on cache writes and `git push` conflicts. |
+| `cancel-in-progress: false` | Lets in-flight runs finish so their cache updates aren't wasted. Use `true` if you'd rather always run the latest. |
+| `ENABLE_CACHE: "true"` | Reuses commits from previous runs for repos you haven't pushed to — without this, every run re-fetches everything. |
+| `SHOW_LAST_UPDATE: "false"` | **The most important one.** If left on, the timestamp in your README changes every run, so the action commits + pushes every run. Hourly = 24 commits/day = profile history full of `📝 Update README.md`. With it off, the action only commits when actual stats change. |
+
+**Frequency guidance:**
+
+| Cadence | Cron | Verdict |
+|---|---|---|
+| Daily | `0 0 * * *` | ✅ Default, no concerns |
+| Hourly | `0 * * * *` | ✅ Sweet spot for frequent runs |
+| Every 15 min | `*/15 * * * *` | ✅ Fine with the config above |
+| Every 5 min | `*/5 * * * *` | ⚠️ GitHub cron minimum; runs may be delayed by GitHub |
+| Faster than 5 min | n/a via cron | ❌ Not supported by GitHub Actions cron |
+
+**Limits worth knowing:**
+- **GitHub cron**: best-effort, minimum interval ~5 minutes, may be delayed under heavy load.
+- **WakaTime API**: ~60 req/min. Each run uses 2 requests, so even per-minute runs (via external trigger) stay safe.
+- **GitHub primary rate limit**: 5,000 GraphQL points/hour. With cache warm, each run uses ~10–20 points — comfortable headroom even at hourly cadence.
+- **Actions cache storage**: 10 GB per repo, LRU-evicted automatically.
+
 ---
 
 ## 📝 FAQ

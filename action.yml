@@ -50,6 +50,12 @@ inputs:
   SIMPLIFY_COMMIT_TIMES_TITLE:
     description: 'Simply title for COMMIT_TIMES_OF_DAY'
     required: false
+  ENABLE_CACHE:
+    description: 'Skip re-fetching commits for repos unchanged since the last run. Pair with actions/cache@v4.'
+    required: false
+  CACHE_FILE:
+    description: 'Cache file path (must match the actions/cache@v4 path input)'
+    required: false
 runs:
   using: docker
   image: Dockerfile
@@ -70,6 +76,8 @@ runs:
     LANGUAGES_AND_TOOLS: ${{ inputs.LANGUAGES_AND_TOOLS }}
     EXCLUDE_FORK_REPOS: ${{ inputs.EXCLUDE_FORK_REPOS }}
     SIMPLIFY_COMMIT_TIMES_TITLE: ${{ inputs.SIMPLIFY_COMMIT_TIMES_TITLE }}
+    ENABLE_CACHE: ${{ inputs.ENABLE_CACHE }}
+    CACHE_FILE: ${{ inputs.CACHE_FILE }}
 branding:
   icon: 'star'
   color: 'orange'
