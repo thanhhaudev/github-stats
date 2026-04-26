@@ -21,15 +21,6 @@ type StatsItem struct {
 	Hours   int     `json:"hours"`
 	Minutes int     `json:"minutes"`
 	Seconds int     `json:"seconds"`
-
-	// AI attribution fields (populated on projects when the user has GenAI tooling integrated)
-	AIAdditions           int64   `json:"ai_additions"`
-	AIDeletions           int64   `json:"ai_deletions"`
-	HumanAdditions        int64   `json:"human_additions"`
-	HumanDeletions        int64   `json:"human_deletions"`
-	AIInputTokens         int64   `json:"ai_input_tokens"`
-	AIOutputTokens        int64   `json:"ai_output_tokens"`
-	AIAveragePromptLength float64 `json:"ai_average_prompt_length"`
 }
 
 type Stats struct {
@@ -40,6 +31,24 @@ type Stats struct {
 		Editors          []StatsItem `json:"editors"`
 		Projects         []StatsItem `json:"projects"`
 		OperatingSystems []StatsItem `json:"operating_systems"`
+
+		// AI attribution aggregates (top-level totals across the user's activity in this range).
+		AIAdditions    int64 `json:"ai_additions"`
+		AIDeletions    int64 `json:"ai_deletions"`
+		HumanAdditions int64 `json:"human_additions"`
+		HumanDeletions int64 `json:"human_deletions"`
+		AIInputTokens  int64 `json:"ai_input_tokens"`
+		AIOutputTokens int64 `json:"ai_output_tokens"`
+
+		// AIAvgPromptLength is doc-defined (avg chars per prompt). Preferred when populated.
+		AIAvgPromptLength float64 `json:"ai_average_prompt_length"`
+		// TODO(wakatime-api): remove AIPromptLength once WakaTime's /stats endpoint
+		// actually returns ai_average_prompt_length at top-level (currently doc-only).
+		// AIPromptLength is the raw total chars typed to AI tools and is semantically
+		// NOT an average — we render it under the "Average Prompt" label as a stop-gap
+		// per user decision. Drop this field + the writer fallback when the API is fixed.
+		// See: https://wakatime.com/developers#stats
+		AIPromptLength int64 `json:"ai_prompt_length"`
 	} `json:"data"`
 }
 

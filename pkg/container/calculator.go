@@ -25,7 +25,10 @@ type LanguageStats struct {
 	Languages      map[string][2]interface{}
 }
 
-// AIStats stores AI vs human attribution aggregated across WakaTime projects.
+// AIStats stores AI vs human attribution from WakaTime's top-level totals.
+// AvgPromptLength comes from doc-defined ai_average_prompt_length when WakaTime
+// returns it; PromptLength is the raw total chars typed (ai_prompt_length) used
+// as fallback since the average field is currently missing in API responses.
 // HasData is false when nothing meaningful was reported, signalling writers to
 // hide the block entirely (avoids rendering a section full of zeros).
 type AIStats struct {
@@ -36,39 +39,28 @@ type AIStats struct {
 	AIInputTokens   int64
 	AIOutputTokens  int64
 	AvgPromptLength float64
+	PromptLength    int64
 	HasData         bool
 }
 
-// CalculateAIStats aggregates AI attribution fields across all WakaTime projects.
-// Avg prompt length is weighted by ai_input_tokens — projects without AI prompts
-// (zero tokens) contribute nothing, preventing them from skewing the average.
+// CalculateAIStats reads AI attribution from the top-level WakaTime stats.
+// We trust the API's own aggregation rather than re-summing per-project items.
 func (d *DataContainer) CalculateAIStats() *AIStats {
 	if d.Data.WakaTime == nil {
 		return &AIStats{}
 	}
 
-	var s AIStats
-	var weightedPromptSum float64
-	var promptWeight int64
-
-	for _, p := range d.Data.WakaTime.Data.Projects {
-		s.AIAdditions += p.AIAdditions
-		s.AIDeletions += p.AIDeletions
-		s.HumanAdditions += p.HumanAdditions
-		s.HumanDeletions += p.HumanDeletions
-		s.AIInputTokens += p.AIInputTokens
-		s.AIOutputTokens += p.AIOutputTokens
-
-		if p.AIInputTokens > 0 && p.AIAveragePromptLength > 0 {
-			weightedPromptSum += p.AIAveragePromptLength * float64(p.AIInputTokens)
-			promptWeight += p.AIInputTokens
-		}
+	src := d.Data.WakaTime.Data
+	s := AIStats{
+		AIAdditions:     src.AIAdditions,
+		AIDeletions:     src.AIDeletions,
+		HumanAdditions:  src.HumanAdditions,
+		HumanDeletions:  src.HumanDeletions,
+		AIInputTokens:   src.AIInputTokens,
+		AIOutputTokens:  src.AIOutputTokens,
+		AvgPromptLength: src.AIAvgPromptLength,
+		PromptLength:    src.AIPromptLength,
 	}
-
-	if promptWeight > 0 {
-		s.AvgPromptLength = weightedPromptSum / float64(promptWeight)
-	}
-
 	s.HasData = s.AIAdditions > 0 || s.AIInputTokens > 0
 	return &s
 }
