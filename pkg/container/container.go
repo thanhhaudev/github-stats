@@ -365,6 +365,11 @@ func (d *DataContainer) Build(ctx context.Context) error {
 	if d.Config.EnableCache {
 		d.Cache = cache.Load(d.Config.CacheFile, d.Config.OnlyMainBranch)
 		d.Logger.Printf("📦 Cache enabled (file=%s, entries=%d)", d.Config.CacheFile, len(d.Cache.Repos))
+		// Ensure the cache file exists from the start so actions/cache@v4's post-step
+		// can save it even if the action exits before the defer below runs.
+		if err := d.Cache.Save(d.Config.CacheFile); err != nil {
+			d.Logger.Printf("⚠️ Failed to initialize cache file: %v", err)
+		}
 	}
 
 	// Save cache via defer so a transient error in InitCommits or InitWakaStats
