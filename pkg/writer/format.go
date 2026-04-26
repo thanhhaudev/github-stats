@@ -33,3 +33,11 @@ var wakaRangeNames = map[string]string{
 	"last_year":     "🗓️ Last 12 Months Stats",
 	"all_time":      "⏱️ All Time Stats",
 }
+
+var aiFootprintTitles = map[string]string{
+	"last_7_days":   "🤖 My Week in AI",
+	"last_30_days":  "🤖 My Month in AI",
+	"last_6_months": "🤖 My 6 Months in AI",
+	"last_year":     "🤖 My Year in AI",
+	"all_time":      "🤖 My AI Footprint",
+}
