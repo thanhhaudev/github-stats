@@ -155,7 +155,7 @@ func TestMakeAIStatsList(t *testing.T) {
 			},
 		},
 		{
-			name:         "Average Prompt falls back to ai_prompt_length when avg is zero",
+			name:         "Total Prompt Chars falls back to ai_prompt_length when avg is zero",
 			aiAdd:        12340,
 			humanAdd:     8721,
 			inTokens:     1_200_000,
@@ -165,8 +165,9 @@ func TestMakeAIStatsList(t *testing.T) {
 			contains: []string{
 				"AI Contribution:        58.6%",
 				"Tokens In / Out:        1.2M / 3.4M",
-				"Average Prompt:         484.8K chars",
+				"Total Prompt Chars:     484.8K chars",
 			},
+			notContains: []string{"Average Prompt:"},
 		},
 		{
 			name:      "small token counts use addCommas; prompt row hidden when both zero",
@@ -176,7 +177,7 @@ func TestMakeAIStatsList(t *testing.T) {
 			contains: []string{
 				"Tokens In / Out:        999 / 0",
 			},
-			notContains: []string{"Average Prompt:"},
+			notContains: []string{"Average Prompt:", "Total Prompt Chars:"},
 		},
 		{
 			name:      "title shows weekly variant for last_7_days",

@@ -179,9 +179,9 @@ func MakeCodingStreakList(s *wakatime.AllTimeSinceTodayStats, currentStreak, lon
 // MakeAIStatsList returns a summary of AI vs human coding attribution from WakaTime.
 // Returns an empty string when there is no AI activity to display, so the block is hidden entirely.
 //
-// The "Average Prompt" row prefers avgPrompt (doc-defined ai_average_prompt_length) and
-// falls back to promptLength (ai_prompt_length) while the avg field is missing in API
-// responses. The row is omitted when neither value is populated.
+// The prompt row prefers avgPrompt (doc-defined ai_average_prompt_length) and renders it
+// as "Average Prompt"; otherwise it falls back to promptLength (ai_prompt_length, a raw
+// total) and renders it as "Total Prompt Chars". The row is omitted when both are zero.
 func MakeAIStatsList(aiAdd, humanAdd, inTokens, outTokens, promptLength int64, avgPrompt float64, wakaRange string) string {
 	if aiAdd == 0 && inTokens == 0 {
 		return ""
@@ -198,17 +198,17 @@ func MakeAIStatsList(aiAdd, humanAdd, inTokens, outTokens, promptLength int64, a
 		aiContribution = float64(aiAdd) / float64(totalAdd) * 100
 	}
 
-	// TODO(wakatime-api): drop the promptLength fallback once WakaTime ships
-	// ai_average_prompt_length at top-level. Today's API returns only ai_prompt_length
-	// (a raw total, not an average), so we display the total under the "Average Prompt"
-	// label as a stop-gap. When avgPrompt becomes non-zero, this branch becomes unreachable
-	// in practice and the whole switch can collapse to a single avgPrompt assignment.
-	var promptValue int64
+	// TODO(wakatime-api): drop the promptLength branch and revert the row label to
+	// "Average Prompt" once WakaTime ships ai_average_prompt_length at top-level.
+	// Today's API returns only ai_prompt_length (a raw total, not an average), so we
+	// surface it under a distinct "Total Prompt Chars" label to avoid the misleading
+	// "Average Prompt" reading.
+	var promptRow string
 	switch {
 	case avgPrompt > 0:
-		promptValue = int64(math.Round(avgPrompt))
+		promptRow = fmt.Sprintf("💬 Average Prompt:         %s chars\n", humanizeCount(int64(math.Round(avgPrompt))))
 	case promptLength > 0:
-		promptValue = promptLength
+		promptRow = fmt.Sprintf("💬 Total Prompt Chars:     %s chars\n", humanizeCount(promptLength))
 	}
 
 	var b strings.Builder
@@ -218,9 +218,7 @@ func MakeAIStatsList(aiAdd, humanAdd, inTokens, outTokens, promptLength int64, a
 	fmt.Fprintf(&b, "👤 Written by Hand:        %s lines\n", addCommas(int(humanAdd)))
 	fmt.Fprintf(&b, "📊 AI Contribution:        %.1f%%\n", aiContribution)
 	fmt.Fprintf(&b, "🔤 Tokens In / Out:        %s / %s\n", humanizeCount(inTokens), humanizeCount(outTokens))
-	if promptValue > 0 {
-		fmt.Fprintf(&b, "💬 Average Prompt:         %s chars\n", humanizeCount(promptValue))
-	}
+	b.WriteString(promptRow)
 	b.WriteString("```\n\n")
 
 	return b.String()
