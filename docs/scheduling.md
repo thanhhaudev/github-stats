@@ -31,7 +31,7 @@ jobs:
           key: github-stats-${{ github.run_id }}
           restore-keys: github-stats-
 
-      - uses: thanhhaudev/github-stats@master
+      - uses: thanhhaudev/github-stats@v1
         env:
           GITHUB_TOKEN: ${{ secrets.GH_TOKEN }}
           WAKATIME_API_KEY: ${{ secrets.WAKATIME_API_KEY }}
