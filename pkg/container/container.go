@@ -43,17 +43,17 @@ func (d *DataContainer) metrics(com *CommitStats, lang *LanguageStats, ai *AISta
 		aiBlock = writer.MakeAIStatsList(ai.AIAdditions, ai.HumanAdditions, ai.AIInputTokens, ai.AIOutputTokens, ai.PromptLength, ai.AvgPromptLength, d.Config.WakaTimeRange)
 	}
 	return map[string]string{
-		"LANGUAGE_PER_REPO":   writer.MakeLanguagePerRepoList(d.Data.Repositories, version),
-		"LANGUAGES_AND_TOOLS": writer.MakeLanguageAndToolList(lang.Languages, lang.TotalSize),
-		"COMMIT_DAYS_OF_WEEK": writer.MakeCommitDaysOfWeekList(com.DailyCommits, com.TotalCommits, version),
-		"COMMIT_TIMES_OF_DAY": writer.MakeCommitTimesOfDayList(d.Data.Commits, d.Config.SimplifyCommitTimesTitle, version),
-		"WAKATIME_SPENT_TIME": writer.MakeWakaActivityList(
+		config.MetricLanguagePerRepo:   writer.MakeLanguagePerRepoList(d.Data.Repositories, version),
+		config.MetricLanguagesAndTools: writer.MakeLanguageAndToolList(lang.Languages, lang.TotalSize),
+		config.MetricCommitDaysOfWeek:  writer.MakeCommitDaysOfWeekList(com.DailyCommits, com.TotalCommits, version),
+		config.MetricCommitTimesOfDay:  writer.MakeCommitTimesOfDayList(d.Data.Commits, d.Config.SimplifyCommitTimesTitle, version),
+		config.MetricWakaTimeSpentTime: writer.MakeWakaActivityList(
 			d.Data.WakaTime,
 			d.Config.WakaTimeData,
 			version,
 		),
-		"CODING_STREAK":     writer.MakeCodingStreakList(d.Data.WakaTimeAllTime, com.CurrentStreak, com.LongestStreak),
-		"WAKATIME_AI_STATS": aiBlock,
+		config.MetricCodingStreak:    writer.MakeCodingStreakList(d.Data.WakaTimeAllTime, com.CurrentStreak, com.LongestStreak),
+		config.MetricWakaTimeAIStats: aiBlock,
 	}
 }
 
