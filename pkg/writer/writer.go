@@ -202,13 +202,14 @@ func MakeAIStatsList(aiAdd, humanAdd, inTokens, outTokens, promptLength int64, a
 	// "Average Prompt" once WakaTime ships ai_average_prompt_length at top-level.
 	// Today's API returns only ai_prompt_length (a raw total, not an average), so we
 	// surface it under a distinct "Total Prompt Chars" label to avoid the misleading
-	// "Average Prompt" reading.
+	// "Average Prompt" reading. The unit lives in the label (mirroring the
+	// "Tokens In / Out" row) so the value column stays free of a "chars" suffix.
 	var promptRow string
 	switch {
 	case avgPrompt > 0:
 		promptRow = fmt.Sprintf("💬 Average Prompt:         %s chars\n", humanizeCount(int64(math.Round(avgPrompt))))
 	case promptLength > 0:
-		promptRow = fmt.Sprintf("💬 Total Prompt Chars:     %s chars\n", humanizeCount(promptLength))
+		promptRow = fmt.Sprintf("💬 Total Prompt Chars:     %s\n", humanizeCount(promptLength))
 	}
 
 	var b strings.Builder
