@@ -7,6 +7,63 @@ import (
 	"github.com/thanhhaudev/github-stats/pkg/wakatime"
 )
 
+func TestFormatCountLine(t *testing.T) {
+	tests := []struct {
+		name     string
+		label    string
+		value    int64
+		singular string
+		plural   string
+		want     string
+	}{
+		{
+			name:     "uses singular form for one",
+			label:    "🔥 Current Streak:",
+			value:    1,
+			singular: "day",
+			plural:   "days",
+			want:     "1 day",
+		},
+		{
+			name:     "uses plural form for many",
+			label:    "📅 Active Days:",
+			value:    2,
+			singular: "day",
+			plural:   "days",
+			want:     "2 days",
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			got := formatCountLine(tt.label, tt.value, tt.singular, tt.plural)
+			if !strings.Contains(got, tt.label) || !strings.Contains(got, tt.want) {
+				t.Fatalf("unexpected line:\nwant label %q and value %q\ngot  %q", tt.label, tt.want, got)
+			}
+		})
+	}
+}
+
+func TestMakeStatBlock(t *testing.T) {
+	got := makeStatBlock("📈 Coding Streak",
+		formatCountLine("🔥 Current Streak:", 1, "day", "days"),
+		formatCountLine("🏆 Longest Streak:", 2, "day", "days"),
+	)
+
+	if !strings.Contains(got, "**📈 Coding Streak**") {
+		t.Fatalf("missing title in output: %q", got)
+	}
+	if !strings.Contains(got, "1 day") {
+		t.Fatalf("missing singular value in output: %q", got)
+	}
+	if !strings.Contains(got, "2 days") {
+		t.Fatalf("missing plural value in output: %q", got)
+	}
+	if !strings.Contains(got, "```text") {
+		t.Fatalf("missing code block in output: %q", got)
+	}
+}
+
 func TestMakeCodingStreakList(t *testing.T) {
 	tests := []struct {
 		name          string
@@ -122,17 +179,16 @@ func TestMakeCodingStreakList(t *testing.T) {
 
 func TestMakeAIStatsList(t *testing.T) {
 	tests := []struct {
-		name         string
-		aiAdd        int64
-		humanAdd     int64
-		inTokens     int64
-		outTokens    int64
-		promptLength int64
-		avgPrompt    float64
-		wakaRange    string
-		empty        bool
-		contains     []string
-		notContains  []string
+		name        string
+		aiAdd       int64
+		humanAdd    int64
+		inTokens    int64
+		outTokens   int64
+		avgPrompt   float64
+		wakaRange   string
+		empty       bool
+		contains    []string
+		notContains []string
 	}{
 		{
 			name:  "no activity returns empty",
@@ -153,21 +209,6 @@ func TestMakeAIStatsList(t *testing.T) {
 				"Tokens In / Out:        120.0K / 350.0K",
 				"Average Prompt:         7.2K chars",
 			},
-		},
-		{
-			name:         "Total Prompt Chars falls back to ai_prompt_length when avg is zero",
-			aiAdd:        12340,
-			humanAdd:     8721,
-			inTokens:     1_200_000,
-			outTokens:    3_400_000,
-			promptLength: 484803,
-			wakaRange:    "all_time",
-			contains: []string{
-				"AI Contribution:        58.6%",
-				"Tokens In / Out:        1.2M / 3.4M",
-				"Total Prompt Chars:     484.8K\n",
-			},
-			notContains: []string{"Average Prompt:", "484.8K chars"},
 		},
 		{
 			name:      "small token counts use addCommas; prompt row hidden when both zero",
@@ -224,7 +265,7 @@ func TestMakeAIStatsList(t *testing.T) {
 
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			got := MakeAIStatsList(tt.aiAdd, tt.humanAdd, tt.inTokens, tt.outTokens, tt.promptLength, tt.avgPrompt, tt.wakaRange)
+			got := MakeAIStatsList(tt.aiAdd, tt.humanAdd, tt.inTokens, tt.outTokens, tt.avgPrompt, tt.wakaRange)
 
 			if tt.empty {
 				if got != "" {

@@ -39,16 +39,8 @@ type Stats struct {
 		HumanDeletions int64 `json:"human_deletions"`
 		AIInputTokens  int64 `json:"ai_input_tokens"`
 		AIOutputTokens int64 `json:"ai_output_tokens"`
-
-		// AIAvgPromptLength is doc-defined (avg chars per prompt). Preferred when populated.
-		AIAvgPromptLength float64 `json:"ai_average_prompt_length"`
-		// TODO(wakatime-api): remove AIPromptLength once WakaTime's /stats endpoint
-		// actually returns ai_average_prompt_length at top-level (currently doc-only).
-		// AIPromptLength is the raw total chars typed to AI tools and is semantically
-		// NOT an average — we render it under the "Average Prompt" label as a stop-gap
-		// per user decision. Drop this field + the writer fallback when the API is fixed.
-		// See: https://wakatime.com/developers#stats
-		AIPromptLength int64 `json:"ai_prompt_length"`
+		AIAvgPromptLength float64 `json:"ai_prompt_length_avg"`
+		AIPromptLength    int64   `json:"ai_prompt_length_sum"`
 	} `json:"data"`
 }
 
