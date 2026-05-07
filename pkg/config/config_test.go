@@ -5,6 +5,30 @@ import (
 	"testing"
 )
 
+func TestLoad_SimpleLogs(t *testing.T) {
+	t.Setenv("GITHUB_TOKEN", "ghp_test123")
+	t.Setenv("SHOW_METRICS", "COMMIT_TIMES_OF_DAY")
+	t.Setenv("SIMPLE_LOGS", "true")
+
+	cfg := Load()
+
+	if !cfg.SimpleLogs {
+		t.Fatal("expected SIMPLE_LOGS to be loaded as true")
+	}
+}
+
+func TestLoad_EnableGitHubGroups(t *testing.T) {
+	t.Setenv("GITHUB_TOKEN", "ghp_test123")
+	t.Setenv("SHOW_METRICS", "COMMIT_TIMES_OF_DAY")
+	t.Setenv("GITHUB_ACTIONS", "true")
+
+	cfg := Load()
+
+	if !cfg.EnableGitHubGroups {
+		t.Fatal("expected GITHUB_ACTIONS to enable GitHub log groups")
+	}
+}
+
 func TestConfig_Validate(t *testing.T) {
 	tests := []struct {
 		name    string

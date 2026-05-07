@@ -50,6 +50,9 @@ inputs:
   SIMPLIFY_COMMIT_TIMES_TITLE:
     description: 'Simply title for COMMIT_TIMES_OF_DAY'
     required: false
+  SIMPLE_LOGS:
+    description: 'Show only high-level step logs'
+    required: false
   ENABLE_CACHE:
     description: 'Skip re-fetching commits for repos unchanged since the last run. Pair with actions/cache@v4.'
     required: false
@@ -76,6 +79,7 @@ runs:
     LANGUAGES_AND_TOOLS: ${{ inputs.LANGUAGES_AND_TOOLS }}
     EXCLUDE_FORK_REPOS: ${{ inputs.EXCLUDE_FORK_REPOS }}
     SIMPLIFY_COMMIT_TIMES_TITLE: ${{ inputs.SIMPLIFY_COMMIT_TIMES_TITLE }}
+    SIMPLE_LOGS: ${{ inputs.SIMPLE_LOGS }}
     ENABLE_CACHE: ${{ inputs.ENABLE_CACHE }}
     CACHE_FILE: ${{ inputs.CACHE_FILE }}
 branding:

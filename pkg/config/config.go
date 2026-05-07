@@ -59,13 +59,15 @@ type Config struct {
 	SimplifyCommitTimesTitle bool
 
 	// Git settings
-	DryRun          bool
-	Debug           bool
-	CommitUserName  string
-	CommitUserEmail string
-	CommitMessage   string
-	BranchName      string
-	SectionName     string
+	DryRun             bool
+	Debug              bool
+	SimpleLogs         bool
+	EnableGitHubGroups bool
+	CommitUserName     string
+	CommitUserEmail    string
+	CommitMessage      string
+	BranchName         string
+	SectionName        string
 
 	// Repository settings
 	HideRepoInfo     bool
@@ -97,13 +99,15 @@ func Load() *Config {
 		SimplifyCommitTimesTitle: os.Getenv("SIMPLIFY_COMMIT_TIMES_TITLE") == TrueVal,
 
 		// Git settings
-		DryRun:          os.Getenv("DRY_RUN") == TrueVal,
-		Debug:           os.Getenv("DEBUG") == TrueVal,
-		CommitUserName:  os.Getenv("COMMIT_USER_NAME"),
-		CommitUserEmail: os.Getenv("COMMIT_USER_EMAIL"),
-		CommitMessage:   os.Getenv("COMMIT_MESSAGE"),
-		BranchName:      os.Getenv("BRANCH_NAME"),
-		SectionName:     os.Getenv("SECTION_NAME"),
+		DryRun:             os.Getenv("DRY_RUN") == TrueVal,
+		Debug:              os.Getenv("DEBUG") == TrueVal,
+		SimpleLogs:         os.Getenv("SIMPLE_LOGS") == TrueVal,
+		EnableGitHubGroups: os.Getenv("GITHUB_ACTIONS") == TrueVal,
+		CommitUserName:     os.Getenv("COMMIT_USER_NAME"),
+		CommitUserEmail:    os.Getenv("COMMIT_USER_EMAIL"),
+		CommitMessage:      os.Getenv("COMMIT_MESSAGE"),
+		BranchName:         os.Getenv("BRANCH_NAME"),
+		SectionName:        os.Getenv("SECTION_NAME"),
 
 		// Repository settings
 		HideRepoInfo:     os.Getenv("HIDE_REPO_INFO") == TrueVal,
