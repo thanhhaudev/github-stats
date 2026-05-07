@@ -39,7 +39,7 @@ func main() {
 	ctx = withClock(ctx, cl)
 	defer cancel()
 
-	gc := github.NewGitHub(cfg.GitHubToken, cfg.Debug)
+	gc := github.NewGitHub(cfg.GitHubToken, cfg.Debug, cfg.HideRepoInfo)
 	wc := wakatime.NewWakaTime(logger, cfg.WakaTimeAPIKey, wakatime.StatsRange(cfg.WakaTimeRange))
 	dc := container.NewDataContainer(logger, container.NewClientManager(wc, gc), cfg)
 	if err := dc.Build(ctx); err != nil {

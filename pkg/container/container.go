@@ -106,7 +106,9 @@ func (d *DataContainer) InitViewer(ctx context.Context) error {
 
 	d.Data.Viewer = v
 	if d.Config.Debug {
-		d.Logger.Printf("Successfully fetched viewer: %s (ID: %s)\n", d.Data.Viewer.Login, d.Data.Viewer.ID)
+		d.Logger.Println(viewerFetchedLogMessage(d.Config.HideRepoInfo, d.Data.Viewer))
+	} else if d.Config.HideRepoInfo {
+		d.Logger.Println(viewerFetchedLogMessage(true, d.Data.Viewer))
 	}
 
 	return nil
@@ -196,16 +198,7 @@ func (d *DataContainer) InitCommits(ctx context.Context) error {
 	}
 
 	if hiddenRepoInfo {
-		if d.Config.Debug {
-			d.Logger.Printf("🔍 Fetching commits from %d %s...", repoCount, func() string {
-				if repoCount == 1 {
-					return "repository"
-				}
-				return "repositories"
-			}())
-		} else {
-			d.Logger.Println("🔍 Fetching commits from repositories...")
-		}
+		d.Logger.Println(fetchingCommitsLogMessage(true, d.Config.Debug, repoCount))
 	}
 
 	var wg sync.WaitGroup
@@ -364,11 +357,7 @@ func (d *DataContainer) Build(ctx context.Context) error {
 
 	if d.Config.EnableCache {
 		d.Cache = cache.Load(d.Config.CacheFile, d.Config.OnlyMainBranch)
-		if d.Config.HideRepoInfo {
-			d.Logger.Printf("📦 Cache enabled (file=%s)", d.Config.CacheFile)
-		} else {
-			d.Logger.Printf("📦 Cache enabled (file=%s, entries=%d)", d.Config.CacheFile, len(d.Cache.Repos))
-		}
+		d.Logger.Println(cacheEnabledLogMessage(d.Config.HideRepoInfo, d.Config.CacheFile, len(d.Cache.Repos)))
 		// Ensure the cache file exists from the start so actions/cache@v4's post-step
 		// can save it even if the action exits before the defer below runs.
 		if err := d.Cache.Save(d.Config.CacheFile); err != nil {
@@ -392,7 +381,7 @@ func (d *DataContainer) Build(ctx context.Context) error {
 		if err := d.Cache.Save(d.Config.CacheFile); err != nil {
 			d.Logger.Printf("⚠️ Failed to save cache: %v", err)
 		} else {
-			d.Logger.Printf("📦 Cache saved%s", cacheRepoCountSuffix(d.Config.HideRepoInfo, len(d.Cache.Repos)))
+			d.Logger.Println(cacheSavedLogMessage(d.Config.HideRepoInfo, len(d.Cache.Repos)))
 		}
 	}()
 
@@ -444,14 +433,46 @@ func NewDataContainer(l *log.Logger, cm *ClientManager, cfg *config.Config) *Dat
 	}
 }
 
-func cacheRepoCountSuffix(hidden bool, count int) string {
+func cacheEnabledLogMessage(hidden bool, cachePath string, entryCount int) string {
 	if hidden {
-		return ""
+		return "📦 Cache enabled"
+	}
+
+	return fmt.Sprintf("📦 Cache enabled (file=%s, entries=%d)", cachePath, entryCount)
+}
+
+func cacheSavedLogMessage(hidden bool, count int) string {
+	if hidden {
+		return "📦 Cache saved"
 	}
 
 	if count == 1 {
-		return " (1 repo)"
+		return "📦 Cache saved (1 repo)"
 	}
 
-	return fmt.Sprintf(" (%d repos)", count)
+	return fmt.Sprintf("📦 Cache saved (%d repos)", count)
+}
+
+func viewerFetchedLogMessage(hidden bool, v *github.Viewer) string {
+	if hidden || v == nil {
+		return "Successfully fetched viewer"
+	}
+
+	return fmt.Sprintf("Successfully fetched viewer: %s (ID: %s)", v.Login, v.ID)
+}
+
+func fetchingCommitsLogMessage(hidden bool, debug bool, repoCount int) string {
+	if hidden {
+		return "🔍 Fetching commits from repositories..."
+	}
+
+	if debug {
+		if repoCount == 1 {
+			return "🔍 Fetching commits from 1 repository..."
+		}
+
+		return fmt.Sprintf("🔍 Fetching commits from %d repositories...", repoCount)
+	}
+
+	return "🔍 Fetching commits from repositories..."
 }

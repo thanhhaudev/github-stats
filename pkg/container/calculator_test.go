@@ -220,30 +220,30 @@ func TestCacheRepoCountSuffix(t *testing.T) {
 			name:   "hidden repo info omits count",
 			hidden: true,
 			count:  33,
-			want:   "",
+			want:   "📦 Cache saved",
 		},
 		{
 			name:   "singular count is formatted correctly",
 			hidden: false,
 			count:  1,
-			want:   " (1 repo)",
+			want:   "📦 Cache saved (1 repo)",
 		},
 		{
 			name:   "plural count is formatted correctly",
 			hidden: false,
 			count:  33,
-			want:   " (33 repos)",
+			want:   "📦 Cache saved (33 repos)",
 		},
 	}
 
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			got := cacheRepoCountSuffix(tt.hidden, tt.count)
+			got := cacheSavedLogMessage(tt.hidden, tt.count)
 			if got != tt.want {
-				t.Fatalf("unexpected suffix: want %q, got %q", tt.want, got)
+				t.Fatalf("unexpected message: want %q, got %q", tt.want, got)
 			}
 			if tt.hidden && strings.Contains(got, "repos") {
-				t.Fatalf("hidden suffix leaked repo count: %q", got)
+				t.Fatalf("hidden message leaked repo count: %q", got)
 			}
 		})
 	}

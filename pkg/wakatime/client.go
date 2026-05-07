@@ -7,9 +7,11 @@ import (
 	"fmt"
 	"net/http"
 	"net/url"
+	"time"
 )
 
 const ApiUrl = "https://wakatime.com/api/v1/"
+const defaultHTTPTimeout = 30 * time.Second
 
 type Client struct {
 	apiKey     string
@@ -89,6 +91,6 @@ func NewClient(apiKey string) *Client {
 	return &Client{
 		apiKey:     apiKey,
 		origin:     ApiUrl,
-		httpClient: http.DefaultClient,
+		httpClient: &http.Client{Timeout: defaultHTTPTimeout},
 	}
 }
