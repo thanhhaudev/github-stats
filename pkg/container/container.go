@@ -364,7 +364,11 @@ func (d *DataContainer) Build(ctx context.Context) error {
 
 	if d.Config.EnableCache {
 		d.Cache = cache.Load(d.Config.CacheFile, d.Config.OnlyMainBranch)
-		d.Logger.Printf("📦 Cache enabled (file=%s, entries=%d)", d.Config.CacheFile, len(d.Cache.Repos))
+		if d.Config.HideRepoInfo {
+			d.Logger.Printf("📦 Cache enabled (file=%s)", d.Config.CacheFile)
+		} else {
+			d.Logger.Printf("📦 Cache enabled (file=%s, entries=%d)", d.Config.CacheFile, len(d.Cache.Repos))
+		}
 		// Ensure the cache file exists from the start so actions/cache@v4's post-step
 		// can save it even if the action exits before the defer below runs.
 		if err := d.Cache.Save(d.Config.CacheFile); err != nil {
@@ -388,7 +392,7 @@ func (d *DataContainer) Build(ctx context.Context) error {
 		if err := d.Cache.Save(d.Config.CacheFile); err != nil {
 			d.Logger.Printf("⚠️ Failed to save cache: %v", err)
 		} else {
-			d.Logger.Printf("📦 Cache saved (%d repos)", len(d.Cache.Repos))
+			d.Logger.Printf("📦 Cache saved%s", cacheRepoCountSuffix(d.Config.HideRepoInfo, len(d.Cache.Repos)))
 		}
 	}()
 
@@ -438,4 +442,16 @@ func NewDataContainer(l *log.Logger, cm *ClientManager, cfg *config.Config) *Dat
 		ClientManager: cm,
 		Config:        cfg,
 	}
+}
+
+func cacheRepoCountSuffix(hidden bool, count int) string {
+	if hidden {
+		return ""
+	}
+
+	if count == 1 {
+		return " (1 repo)"
+	}
+
+	return fmt.Sprintf(" (%d repos)", count)
 }
