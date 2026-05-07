@@ -128,11 +128,10 @@ func MakeLastUpdatedOn(t string) string {
 	return fmt.Sprintf("\n\n⏳ *Last updated on %s*", t)
 }
 
-// MakeCodingStreakList returns coding streak statistics from commit data and WakaTime all-time data
-// Works with or without WakaTime data - shows commit streaks even if WakaTime is not configured
+// MakeCodingStreakList returns coding streak statistics from commit data and WakaTime all-time data.
 func MakeCodingStreakList(s *wakatime.AllTimeSinceTodayStats, currentStreak, longestStreak int) string {
 	if s == nil && currentStreak == 0 && longestStreak == 0 {
-		return "" // return empty when there's no streaks and no WakaTime data
+		return ""
 	}
 
 	lines := []string{
@@ -140,26 +139,23 @@ func MakeCodingStreakList(s *wakatime.AllTimeSinceTodayStats, currentStreak, lon
 		formatCountLine("🏆 Longest Streak:", int64(longestStreak), "day", "days"),
 	}
 
-	// show WakaTime data if available
 	if s != nil {
-		// calculate daily average hours and minutes
 		dailyAvg := int(s.Data.DailyAverage)
 		dailyAvgHours := dailyAvg / 3600
 		dailyAvgMinutes := (dailyAvg % 3600) / 60
 
-		// parse start and end dates to calculate total days
 		startDate, _ := time.Parse("2006-01-02", s.Data.Range.StartDate)
 		endDate, _ := time.Parse("2006-01-02", s.Data.Range.EndDate)
 		totalDays := int(endDate.Sub(startDate).Hours() / 24)
 
 		var activeDays int
 		if s.Data.DailyAverage > 0 {
-			activeDays = int(s.Data.TotalSeconds / s.Data.DailyAverage) // calculate active days based on total seconds and daily average
+			activeDays = int(s.Data.TotalSeconds / s.Data.DailyAverage)
 		}
 
 		var consistencyPercent float64
 		if totalDays > 0 {
-			consistencyPercent = (float64(activeDays) / float64(totalDays)) * 100 // calculate consistency percentage
+			consistencyPercent = (float64(activeDays) / float64(totalDays)) * 100
 		}
 
 		lines = append(lines,
@@ -174,7 +170,6 @@ func MakeCodingStreakList(s *wakatime.AllTimeSinceTodayStats, currentStreak, lon
 }
 
 // MakeAIStatsList returns a summary of AI vs human coding attribution from WakaTime.
-// Returns an empty string when there is no AI activity to display, so the block is hidden entirely.
 func MakeAIStatsList(aiAdd, humanAdd, inTokens, outTokens int64, avgPrompt float64, wakaRange string) string {
 	if aiAdd == 0 && inTokens == 0 {
 		return ""
@@ -199,7 +194,7 @@ func MakeAIStatsList(aiAdd, humanAdd, inTokens, outTokens int64, avgPrompt float
 	}
 
 	if avgPrompt > 0 {
-		lines = append(lines, formatCountLineWithFormatter("💬 Average Prompt:", int64(math.Round(avgPrompt)), "char", "chars", humanizeCount))
+		lines = append(lines, formatCountLineFormatted("💬 Average Prompt:", int64(math.Round(avgPrompt)), "char", "chars", humanizeCount))
 	}
 
 	return makeStatBlock(title, lines...)
@@ -487,10 +482,9 @@ func makeStatBlock(title string, lines ...string) string {
 	return b.String()
 }
 
-// formatStatLine formats a stat line with consistent padding between label and value
-// Example: "🔥 Current Streak:        15 days"
+// formatStatLine formats a stat line with consistent padding between label and value.
 func formatStatLine(label, value string) string {
-	const labelWidth = 26 // width to pad the label to (including emoji)
+	const labelWidth = 26
 	labelLen := utf8.RuneCountInString(label)
 	padding := labelWidth - labelLen
 	if padding < 0 {
@@ -500,12 +494,12 @@ func formatStatLine(label, value string) string {
 }
 
 func formatCountLine(label string, value int64, singular, plural string) string {
-	return formatCountLineWithFormatter(label, value, singular, plural, func(n int64) string {
+	return formatCountLineFormatted(label, value, singular, plural, func(n int64) string {
 		return addCommas(int(n))
 	})
 }
 
-func formatCountLineWithFormatter(label string, value int64, singular, plural string, format func(int64) string) string {
+func formatCountLineFormatted(label string, value int64, singular, plural string, format func(int64) string) string {
 	unit := plural
 	if value == 1 {
 		unit = singular
