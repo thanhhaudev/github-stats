@@ -200,16 +200,39 @@ func MakeAIStatsList(aiAdd, humanAdd, inTokens, outTokens int64, avgPrompt float
 	return makeStatBlock(title, lines...)
 }
 
-// humanizeCount formats large numbers with K/M suffixes; falls back to addCommas under 1,000.
+// humanizeCount formats large numbers with compact suffixes; falls back to addCommas under 1,000.
 func humanizeCount(n int64) string {
-	switch {
-	case n >= 1_000_000:
-		return fmt.Sprintf("%.1fM", float64(n)/1_000_000)
-	case n >= 1_000:
-		return fmt.Sprintf("%.1fK", float64(n)/1_000)
-	default:
+	if n < 1_000 {
 		return addCommas(int(n))
 	}
+
+	type suffix struct {
+		value float64
+		label string
+	}
+
+	suffixes := []suffix{
+		{value: 1_000_000_000_000, label: "T"},
+		{value: 1_000_000_000, label: "B"},
+		{value: 1_000_000, label: "M"},
+		{value: 1_000, label: "K"},
+	}
+
+	for i, s := range suffixes {
+		if float64(n) < s.value {
+			continue
+		}
+
+		scaled := float64(n) / s.value
+		if scaled >= 999.95 && i > 0 {
+			next := suffixes[i-1]
+			return fmt.Sprintf("%.1f%s", float64(n)/next.value, next.label)
+		}
+
+		return fmt.Sprintf("%.1f%s", scaled, s.label)
+	}
+
+	return addCommas(int(n))
 }
 
 // MakeCommitTimesOfDayList returns a list of commits made during different times of the day

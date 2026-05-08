@@ -287,3 +287,46 @@ func TestMakeAIStatsList(t *testing.T) {
 		})
 	}
 }
+
+func TestHumanizeCount(t *testing.T) {
+	tests := []struct {
+		name  string
+		input int64
+		want  string
+	}{
+		{
+			name:  "uses commas below one thousand",
+			input: 999,
+			want:  "999",
+		},
+		{
+			name:  "formats thousands",
+			input: 1_500,
+			want:  "1.5K",
+		},
+		{
+			name:  "rolls over rounded thousands into millions",
+			input: 999_950,
+			want:  "1.0M",
+		},
+		{
+			name:  "formats millions",
+			input: 2_500_000,
+			want:  "2.5M",
+		},
+		{
+			name:  "formats billions",
+			input: 1_260_000_000,
+			want:  "1.3B",
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			got := humanizeCount(tt.input)
+			if got != tt.want {
+				t.Fatalf("humanizeCount(%d) = %q, want %q", tt.input, got, tt.want)
+			}
+		})
+	}
+}
