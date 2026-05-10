@@ -6,6 +6,7 @@ import (
 	"sort"
 	"strings"
 	"time"
+	"unicode"
 	"unicode/utf8"
 
 	"github.com/thanhhaudev/github-stats/pkg/github"
@@ -450,9 +451,9 @@ func formatData(data Data, version string) string {
 
 	b.WriteString("\n")
 	b.WriteString(n)
-	b.WriteString(strings.Repeat(" ", nameLength-utf8.RuneCountInString(n)))
+	b.WriteString(strings.Repeat(" ", max(0, nameLength-displayWidth(n))))
 	b.WriteString(d)
-	b.WriteString(strings.Repeat(" ", descriptionLength-utf8.RuneCountInString(d)))
+	b.WriteString(strings.Repeat(" ", max(0, descriptionLength-displayWidth(d))))
 
 	if version == "2" {
 		b.WriteString(makeProgressBarV2(data.Percent))
@@ -468,6 +469,14 @@ func formatData(data Data, version string) string {
 
 func formatPercent(p float64) string {
 	return fmt.Sprintf("%05.2f%%", p)
+}
+
+func max(a, b int) int {
+	if a > b {
+		return a
+	}
+
+	return b
 }
 
 func truncateString(s string, l int) string {
@@ -508,12 +517,55 @@ func makeStatBlock(title string, lines ...string) string {
 // formatStatLine formats a stat line with consistent padding between label and value.
 func formatStatLine(label, value string) string {
 	const labelWidth = 26
-	labelLen := utf8.RuneCountInString(label)
+	labelLen := displayWidth(label)
 	padding := labelWidth - labelLen
 	if padding < 0 {
 		padding = 0
 	}
 	return label + strings.Repeat(" ", padding) + value + "\n"
+}
+
+func displayWidth(s string) int {
+	width := 0
+	for _, r := range s {
+		switch {
+		case unicode.Is(unicode.Mn, r):
+			continue
+		case isWideRune(r):
+			width += 2
+		default:
+			width++
+		}
+	}
+
+	return width
+}
+
+func isWideRune(r rune) bool {
+	switch {
+	case r >= 0x1F300 && r <= 0x1FAFF:
+		return true
+	case r >= 0x2600 && r <= 0x26FF:
+		return true
+	case r >= 0x2700 && r <= 0x27BF:
+		return true
+	case r >= 0x2E80 && r <= 0xA4CF:
+		return true
+	case r >= 0xAC00 && r <= 0xD7A3:
+		return true
+	case r >= 0xF900 && r <= 0xFAFF:
+		return true
+	case r >= 0xFE10 && r <= 0xFE19:
+		return true
+	case r >= 0xFE30 && r <= 0xFE6F:
+		return true
+	case r >= 0xFF00 && r <= 0xFF60:
+		return true
+	case r >= 0xFFE0 && r <= 0xFFE6:
+		return true
+	default:
+		return false
+	}
 }
 
 func formatCountLine(label string, value int64, singular, plural string) string {
