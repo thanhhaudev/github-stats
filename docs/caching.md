@@ -22,7 +22,7 @@ jobs:
           key: github-stats-${{ github.run_id }}
           restore-keys: github-stats-
 
-      - uses: thanhhaudev/github-stats@master
+      - uses: thanhhaudev/github-stats@v1
         env:
           GITHUB_TOKEN: ${{ secrets.GH_TOKEN }}
           SHOW_METRICS: "COMMIT_TIMES_OF_DAY,LANGUAGE_PER_REPO"

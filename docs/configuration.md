@@ -17,6 +17,7 @@
 | `SECTION_NAME`                | Marker name. Markers become `<!--START_SECTION:<name>-->` and `<!--END_SECTION:<name>-->`.                                     | `readme-stats`              |
 | `PROGRESS_BAR_VERSION`        | `1` (block chars) or `2` (emoji squares).                                                                                      | `1`                         |
 | `SIMPLIFY_COMMIT_TIMES_TITLE` | Shorten `COMMIT_TIMES_OF_DAY` title.                                                                                           | `false`                     |
+| `SIMPLE_LOGS`                 | Show only high-level step logs. Useful for public repos where you want less noisy action output.                               | `false`                     |
 | `COMMIT_MESSAGE`              | Commit message used when pushing the README.                                                                                   | `📝 Update README.md`       |
 | `COMMIT_USER_NAME`            | Git author name.                                                                                                               | `GitHub Action`             |
 | `COMMIT_USER_EMAIL`           | Git author email.                                                                                                              | `action@github.com`         |
@@ -66,5 +67,14 @@ env:
   SHOW_METRICS: "COMMIT_TIMES_OF_DAY,LANGUAGE_PER_REPO"
   ONLY_MAIN_BRANCH: "true"
   EXCLUDE_FORK_REPOS: "true"
+  HIDE_REPO_INFO: "true"
+```
+
+**Public-friendly logs** (less noisy output):
+```yaml
+env:
+  GITHUB_TOKEN: ${{ secrets.GH_TOKEN }}
+  SHOW_METRICS: "COMMIT_TIMES_OF_DAY,LANGUAGE_PER_REPO"
+  SIMPLE_LOGS: "true"
   HIDE_REPO_INFO: "true"
 ```

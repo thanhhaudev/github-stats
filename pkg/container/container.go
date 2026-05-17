@@ -40,20 +40,20 @@ func (d *DataContainer) metrics(com *CommitStats, lang *LanguageStats, ai *AISta
 	version := d.Config.ProgressBarVersion
 	aiBlock := ""
 	if ai != nil && ai.HasData {
-		aiBlock = writer.MakeAIStatsList(ai.AIAdditions, ai.HumanAdditions, ai.AIInputTokens, ai.AIOutputTokens, ai.PromptLength, ai.AvgPromptLength, d.Config.WakaTimeRange)
+		aiBlock = writer.MakeAIStatsList(ai.AIAdditions, ai.HumanAdditions, ai.AIInputTokens, ai.AIOutputTokens, ai.AvgPromptLength, d.Config.WakaTimeRange)
 	}
 	return map[string]string{
-		"LANGUAGE_PER_REPO":   writer.MakeLanguagePerRepoList(d.Data.Repositories, version),
-		"LANGUAGES_AND_TOOLS": writer.MakeLanguageAndToolList(lang.Languages, lang.TotalSize),
-		"COMMIT_DAYS_OF_WEEK": writer.MakeCommitDaysOfWeekList(com.DailyCommits, com.TotalCommits, version),
-		"COMMIT_TIMES_OF_DAY": writer.MakeCommitTimesOfDayList(d.Data.Commits, d.Config.SimplifyCommitTimesTitle, version),
-		"WAKATIME_SPENT_TIME": writer.MakeWakaActivityList(
+		config.MetricLanguagePerRepo:   writer.MakeLanguagePerRepoList(d.Data.Repositories, version),
+		config.MetricLanguagesAndTools: writer.MakeLanguageAndToolList(lang.Languages, lang.TotalSize),
+		config.MetricCommitDaysOfWeek:  writer.MakeCommitDaysOfWeekList(com.DailyCommits, com.TotalCommits, version),
+		config.MetricCommitTimesOfDay:  writer.MakeCommitTimesOfDayList(d.Data.Commits, d.Config.SimplifyCommitTimesTitle, version),
+		config.MetricWakaTimeSpentTime: writer.MakeWakaActivityList(
 			d.Data.WakaTime,
 			d.Config.WakaTimeData,
 			version,
 		),
-		"CODING_STREAK":     writer.MakeCodingStreakList(d.Data.WakaTimeAllTime, com.CurrentStreak, com.LongestStreak),
-		"WAKATIME_AI_STATS": aiBlock,
+		config.MetricCodingStreak:    writer.MakeCodingStreakList(d.Data.WakaTimeAllTime, com.CurrentStreak, com.LongestStreak),
+		config.MetricWakaTimeAIStats: aiBlock,
 	}
 }
 
@@ -75,7 +75,9 @@ func (d *DataContainer) GetStats(c clock.Clock) string {
 	// Show last update time if enabled
 	showLastUpdated(c, &b, d.Config)
 
-	d.Logger.Println("Created statistics successfully")
+	if !d.Config.SimpleLogs {
+		d.Logger.Println("Created statistics successfully")
+	}
 
 	return b.String()
 }
@@ -93,7 +95,9 @@ func showLastUpdated(cl clock.Clock, b *strings.Builder, cfg *config.Config) {
 
 // InitViewer initializes the viewer
 func (d *DataContainer) InitViewer(ctx context.Context) error {
-	d.Logger.Println("Fetching viewer information...")
+	if !d.Config.SimpleLogs {
+		d.Logger.Println("Fetching viewer information...")
+	}
 
 	v, err := d.ClientManager.GetViewer(ctx)
 	if err != nil {
@@ -105,8 +109,10 @@ func (d *DataContainer) InitViewer(ctx context.Context) error {
 	}
 
 	d.Data.Viewer = v
-	if d.Config.Debug {
-		d.Logger.Printf("Successfully fetched viewer: %s (ID: %s)\n", d.Data.Viewer.Login, d.Data.Viewer.ID)
+	if d.Config.Debug && !d.Config.SimpleLogs {
+		d.Logger.Println(viewerFetchedLogMessage(d.Config.HideRepoInfo, d.Data.Viewer))
+	} else if d.Config.HideRepoInfo && !d.Config.SimpleLogs {
+		d.Logger.Println(viewerFetchedLogMessage(true, d.Data.Viewer))
 	}
 
 	return nil
@@ -115,7 +121,9 @@ func (d *DataContainer) InitViewer(ctx context.Context) error {
 // InitRepositories initializes the repositories
 // owned and contributed to by the user
 func (d *DataContainer) InitRepositories(ctx context.Context) error {
-	d.Logger.Println("Fetching repositories...")
+	if !d.Config.SimpleLogs {
+		d.Logger.Println("Fetching repositories...")
+	}
 	seenRepos := make(map[string]bool)
 	errChan := make(chan error, 2)
 	repoChan := make(chan []github.Repository, 2)
@@ -130,7 +138,9 @@ func (d *DataContainer) InitRepositories(ctx context.Context) error {
 		repoChan <- r
 		errChan <- nil
 
-		d.Logger.Println("Fetched owned repositories successfully")
+		if !d.Config.SimpleLogs {
+			d.Logger.Println("Fetched owned repositories successfully")
+		}
 	}()
 
 	go func() {
@@ -143,7 +153,9 @@ func (d *DataContainer) InitRepositories(ctx context.Context) error {
 		repoChan <- c
 		errChan <- nil
 
-		d.Logger.Println("Fetched contributed to repositories successfully")
+		if !d.Config.SimpleLogs {
+			d.Logger.Println("Fetched contributed to repositories successfully")
+		}
 	}()
 
 	for i := 0; i < 2; i++ {
@@ -173,7 +185,9 @@ func (d *DataContainer) InitRepositories(ctx context.Context) error {
 
 // InitCommits initializes the branches of the repositories
 func (d *DataContainer) InitCommits(ctx context.Context) error {
-	d.Logger.Println("Fetching commits...")
+	if !d.Config.SimpleLogs {
+		d.Logger.Println("Fetching commits...")
+	}
 	fetchAllBranches := !d.Config.OnlyMainBranch
 	hiddenRepoInfo := d.Config.HideRepoInfo
 	repoCount := len(d.Data.Repositories)
@@ -196,15 +210,8 @@ func (d *DataContainer) InitCommits(ctx context.Context) error {
 	}
 
 	if hiddenRepoInfo {
-		if d.Config.Debug {
-			d.Logger.Printf("🔍 Fetching commits from %d %s...", repoCount, func() string {
-				if repoCount == 1 {
-					return "repository"
-				}
-				return "repositories"
-			}())
-		} else {
-			d.Logger.Println("🔍 Fetching commits from repositories...")
+		if !d.Config.SimpleLogs {
+			d.Logger.Println(fetchingCommitsLogMessage(true, d.Config.Debug, repoCount))
 		}
 	}
 
@@ -220,7 +227,7 @@ func (d *DataContainer) InitCommits(ctx context.Context) error {
 			// Skip the network round-trip when this repo has not been pushed to since the cached snapshot
 			if d.Cache != nil {
 				if cached, ok := d.Cache.Lookup(repo.Url, repo.PushedAt); ok {
-					if !hiddenRepoInfo {
+					if !hiddenRepoInfo && !d.Config.SimpleLogs {
 						d.Logger.Printf("%s Reusing %d cached commits: %s\n", progress, len(cached), mask(repo.Name))
 					}
 					commitChan <- cached
@@ -232,7 +239,7 @@ func (d *DataContainer) InitCommits(ctx context.Context) error {
 			var fetched []github.Commit
 
 			if fetchAllBranches {
-				if !hiddenRepoInfo {
+				if !hiddenRepoInfo && !d.Config.SimpleLogs {
 					d.Logger.Printf("%s Fetching commits from all branches of: %s\n", progress, mask(repo.Name))
 				}
 
@@ -257,7 +264,7 @@ func (d *DataContainer) InitCommits(ctx context.Context) error {
 
 						mu.Lock()
 						fetched = append(fetched, commits...)
-						if !hiddenRepoInfo && d.Config.Debug {
+						if !hiddenRepoInfo && d.Config.Debug && !d.Config.SimpleLogs {
 							log.Printf("%s Fetched %d commits from branch %s", progress, len(commits), mask(branch.Name))
 						}
 						mu.Unlock()
@@ -266,7 +273,7 @@ func (d *DataContainer) InitCommits(ctx context.Context) error {
 
 				branchWg.Wait()
 			} else {
-				if !hiddenRepoInfo {
+				if !hiddenRepoInfo && !d.Config.SimpleLogs {
 					d.Logger.Printf("%s Fetching commits from default branch of: %s\n", progress, mask(repo.Name))
 				}
 
@@ -319,13 +326,17 @@ func (d *DataContainer) InitCommits(ctx context.Context) error {
 		}
 	}
 
-	d.Logger.Println("Fetched commits successfully")
+	if !d.Config.SimpleLogs {
+		d.Logger.Println("Fetched commits successfully")
+	}
 	return nil
 }
 
 // InitWakaStats initializes the WakaTime statistics
 func (d *DataContainer) InitWakaStats(ctx context.Context) error {
-	d.Logger.Println("Fetching WakaTime statistics...")
+	if !d.Config.SimpleLogs {
+		d.Logger.Println("Fetching WakaTime statistics...")
+	}
 
 	v, err := d.ClientManager.GetWakaTimeStats(ctx)
 	if err != nil {
@@ -336,9 +347,13 @@ func (d *DataContainer) InitWakaStats(ctx context.Context) error {
 	if v.Data.Status != "ok" {
 		switch v.Data.Status {
 		case "pending_update":
-			d.Logger.Println("WakaTime is not ready yet")
+			if !d.Config.SimpleLogs {
+				d.Logger.Println("WakaTime is not ready yet")
+			}
 		default:
-			d.Logger.Println("An error occurred while fetching WakaTime data:", v.Data.Status)
+			if !d.Config.SimpleLogs {
+				d.Logger.Println("An error occurred while fetching WakaTime data:", v.Data.Status)
+			}
 
 			return nil // Skip if the status is unknown
 		}
@@ -347,10 +362,14 @@ func (d *DataContainer) InitWakaStats(ctx context.Context) error {
 	d.Data.WakaTime = v
 
 	// fetch all-time stats for streak calculation
-	d.Logger.Println("Fetching WakaTime all-time statistics...")
+	if !d.Config.SimpleLogs {
+		d.Logger.Println("Fetching WakaTime all-time statistics...")
+	}
 	allTimeStats, err := d.ClientManager.GetWakaTimeAllTimeSinceToday(ctx)
 	if err != nil {
-		d.Logger.Println("An error occurred while fetching WakaTime all-time data:", err)
+		if !d.Config.SimpleLogs {
+			d.Logger.Println("An error occurred while fetching WakaTime all-time data:", err)
+		}
 	} else {
 		d.Data.WakaTimeAllTime = allTimeStats
 	}
@@ -364,7 +383,9 @@ func (d *DataContainer) Build(ctx context.Context) error {
 
 	if d.Config.EnableCache {
 		d.Cache = cache.Load(d.Config.CacheFile, d.Config.OnlyMainBranch)
-		d.Logger.Printf("📦 Cache enabled (file=%s, entries=%d)", d.Config.CacheFile, len(d.Cache.Repos))
+		if !d.Config.SimpleLogs {
+			d.Logger.Println(cacheEnabledLogMessage(d.Config.HideRepoInfo, d.Config.CacheFile, len(d.Cache.Repos)))
+		}
 		// Ensure the cache file exists from the start so actions/cache@v4's post-step
 		// can save it even if the action exits before the defer below runs.
 		if err := d.Cache.Save(d.Config.CacheFile); err != nil {
@@ -388,7 +409,9 @@ func (d *DataContainer) Build(ctx context.Context) error {
 		if err := d.Cache.Save(d.Config.CacheFile); err != nil {
 			d.Logger.Printf("⚠️ Failed to save cache: %v", err)
 		} else {
-			d.Logger.Printf("📦 Cache saved (%d repos)", len(d.Cache.Repos))
+			if !d.Config.SimpleLogs {
+				d.Logger.Println(cacheSavedLogMessage(d.Config.HideRepoInfo, len(d.Cache.Repos)))
+			}
 		}
 	}()
 
@@ -410,7 +433,9 @@ func (d *DataContainer) Build(ctx context.Context) error {
 			return err
 		}
 
-		d.Logger.Println("Fetching data from GitHub APIs successfully")
+		if !d.Config.SimpleLogs {
+			d.Logger.Println("Fetching data from GitHub APIs successfully")
+		}
 	} else {
 		d.Logger.Println("⚠️ GitHub client is nil, skipping GitHub data fetching")
 	}
@@ -423,7 +448,9 @@ func (d *DataContainer) Build(ctx context.Context) error {
 			return err
 		}
 
-		d.Logger.Println("Fetching data from Wakatime APIs successfully")
+		if !d.Config.SimpleLogs {
+			d.Logger.Println("Fetching data from Wakatime APIs successfully")
+		}
 	}
 
 	d.Logger.Println("Built data container successfully")
@@ -438,4 +465,48 @@ func NewDataContainer(l *log.Logger, cm *ClientManager, cfg *config.Config) *Dat
 		ClientManager: cm,
 		Config:        cfg,
 	}
+}
+
+func cacheEnabledLogMessage(hidden bool, cachePath string, entryCount int) string {
+	if hidden {
+		return "📦 Cache enabled"
+	}
+
+	return fmt.Sprintf("📦 Cache enabled (file=%s, entries=%d)", cachePath, entryCount)
+}
+
+func cacheSavedLogMessage(hidden bool, count int) string {
+	if hidden {
+		return "📦 Cache saved"
+	}
+
+	if count == 1 {
+		return "📦 Cache saved (1 repo)"
+	}
+
+	return fmt.Sprintf("📦 Cache saved (%d repos)", count)
+}
+
+func viewerFetchedLogMessage(hidden bool, v *github.Viewer) string {
+	if hidden || v == nil {
+		return "Successfully fetched viewer"
+	}
+
+	return fmt.Sprintf("Successfully fetched viewer: %s (ID: %s)", v.Login, v.ID)
+}
+
+func fetchingCommitsLogMessage(hidden bool, debug bool, repoCount int) string {
+	if hidden {
+		return "🔍 Fetching commits from repositories..."
+	}
+
+	if debug {
+		if repoCount == 1 {
+			return "🔍 Fetching commits from 1 repository..."
+		}
+
+		return fmt.Sprintf("🔍 Fetching commits from %d repositories...", repoCount)
+	}
+
+	return "🔍 Fetching commits from repositories..."
 }

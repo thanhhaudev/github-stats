@@ -39,28 +39,34 @@ func main() {
 	ctx = withClock(ctx, cl)
 	defer cancel()
 
-	gc := github.NewGitHub(cfg.GitHubToken, cfg.Debug)
+	gc := github.NewGitHub(cfg.GitHubToken, cfg.Debug, cfg.HideRepoInfo)
 	wc := wakatime.NewWakaTime(logger, cfg.WakaTimeAPIKey, wakatime.StatsRange(cfg.WakaTimeRange))
 	dc := container.NewDataContainer(logger, container.NewClientManager(wc, gc), cfg)
-	if err := dc.Build(ctx); err != nil {
+	if err := runGroupedStep(logger, "Build data container", cfg.EnableGitHubGroups, func() error {
+		return dc.Build(ctx)
+	}); err != nil {
 		logger.Fatalln(err)
 	}
 
-	logger.Println("📝 Updating README.md...")
-	err = updateReadme(dc.GetStats(cl), cfg.SectionName)
+	err = runGroupedStep(logger, "Update README", cfg.EnableGitHubGroups, func() error {
+		logger.Println("📝 Updating README.md...")
+		return updateReadme(dc.GetStats(cl), cfg.SectionName)
+	})
 	if err != nil {
 		logger.Fatalf("Error updating README.md: %v", err)
 	}
 
 	if !cfg.DryRun {
-		logger.Println("🔧 Setting up git config...")
-		err = setupGitConfig(
-			dc.Data.Viewer.Login,
-			cfg.GitHubToken,
-			cfg.CommitUserName,
-			cfg.CommitUserEmail,
-			cfg.HideRepoInfo,
-		)
+		err = runGroupedStep(logger, "Configure git", cfg.EnableGitHubGroups, func() error {
+			logger.Println("🔧 Setting up git config...")
+			return setupGitConfig(
+				dc.Data.Viewer.Login,
+				cfg.GitHubToken,
+				cfg.CommitUserName,
+				cfg.CommitUserEmail,
+				cfg.HideRepoInfo,
+			)
+		})
 		if err != nil {
 			logger.Fatalf("Error setting up git config: %v", err)
 		}
@@ -71,19 +77,22 @@ func main() {
 			}
 		}
 
-		changed, err := hasReadmeChanged()
-		if err != nil {
-			logger.Fatalf("Error checking if README.md has changed: %v", err)
-		}
-
-		if changed {
-			logger.Println("📤 Committing and pushing changes...")
-			err = commitAndPushReadme(cfg.CommitMessage, cfg.BranchName, cfg.HideRepoInfo)
+		err = runGroupedStep(logger, "Commit and push README", cfg.EnableGitHubGroups, func() error {
+			changed, err := hasReadmeChanged()
 			if err != nil {
-				logger.Fatalf("Error committing and pushing changes: %v", err)
+				return err
 			}
-		} else {
+
+			if changed {
+				logger.Println("📤 Committing and pushing changes...")
+				return commitAndPushReadme(cfg.CommitMessage, cfg.BranchName, cfg.HideRepoInfo)
+			}
+
 			logger.Println("📤 No changes to commit, skipping...")
+			return nil
+		})
+		if err != nil {
+			logger.Fatalf("Error committing and pushing changes: %v", err)
 		}
 	} else {
 		logger.Println("Skipping GitHub command functions in DRY_RUN mode")
@@ -103,7 +112,9 @@ func setClock(logger *log.Logger, cfg *config.Config) (clock.Clock, error) {
 			return nil, err
 		}
 
-		logger.Printf("🕙 Timezone set to %s\n", cfg.TimeZone)
+		if !cfg.SimpleLogs {
+			logger.Printf("🕙 Timezone set to %s\n", cfg.TimeZone)
+		}
 	}
 
 	return cl, nil

@@ -7,15 +7,18 @@ import (
 	"fmt"
 	"net/http"
 	"strings"
+	"time"
 )
 
 const ApiEndpoint = "https://api.github.com"
+const defaultHTTPTimeout = 30 * time.Second
 
 type Client struct {
-	token      string
-	origin     string
-	debug      bool
-	httpClient *http.Client
+	token        string
+	origin       string
+	debug        bool
+	hideRepoInfo bool
+	httpClient   *http.Client
 }
 
 type GraphQLError struct {
@@ -131,7 +134,7 @@ func (c *Client) do(httpReq *http.Request, v interface{}) error {
 			msgs = append(msgs, msg)
 		}
 
-		if !c.debug {
+		if !c.debug || c.hideRepoInfo {
 			return fmt.Errorf("❌ could not fetch data from GitHub, please check your GitHub token")
 		}
 
@@ -142,11 +145,12 @@ func (c *Client) do(httpReq *http.Request, v interface{}) error {
 }
 
 // NewClient creates a new GitHub client
-func NewClient(token string, debug bool) *Client {
+func NewClient(token string, debug bool, hideRepoInfo bool) *Client {
 	return &Client{
-		token:      token,
-		origin:     ApiEndpoint,
-		debug:      debug,
-		httpClient: http.DefaultClient,
+		token:        token,
+		origin:       ApiEndpoint,
+		debug:        debug,
+		hideRepoInfo: hideRepoInfo,
+		httpClient:   &http.Client{Timeout: defaultHTTPTimeout},
 	}
 }
