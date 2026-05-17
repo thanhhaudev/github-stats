@@ -33,12 +33,12 @@ type Stats struct {
 		OperatingSystems []StatsItem `json:"operating_systems"`
 
 		// AI attribution aggregates (top-level totals across the user's activity in this range).
-		AIAdditions    int64 `json:"ai_additions"`
-		AIDeletions    int64 `json:"ai_deletions"`
-		HumanAdditions int64 `json:"human_additions"`
-		HumanDeletions int64 `json:"human_deletions"`
-		AIInputTokens  int64 `json:"ai_input_tokens"`
-		AIOutputTokens int64 `json:"ai_output_tokens"`
+		AIAdditions       int64   `json:"ai_additions"`
+		AIDeletions       int64   `json:"ai_deletions"`
+		HumanAdditions    int64   `json:"human_additions"`
+		HumanDeletions    int64   `json:"human_deletions"`
+		AIInputTokens     int64   `json:"ai_input_tokens"`
+		AIOutputTokens    int64   `json:"ai_output_tokens"`
 		AIAvgPromptLength float64 `json:"ai_prompt_length_avg"`
 		AIPromptLength    int64   `json:"ai_prompt_length_sum"`
 	} `json:"data"`
