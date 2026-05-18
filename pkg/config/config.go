@@ -181,7 +181,7 @@ func (c *Config) Validate() error {
 				string(wakatime.StatsLastYear),
 				string(wakatime.StatsRangeAllTime),
 			}
-			return fmt.Errorf("WAKATIME_RANGE must be one of: %s (got: %s)", strings.Join(validRanges, ", "), c.WakaTimeRange)
+			return fmt.Errorf("WAKATIME_RANGE must be one of: %s", strings.Join(validRanges, ", "))
 		}
 	}
 
@@ -195,7 +195,7 @@ func (c *Config) Validate() error {
 		for _, data := range c.WakaTimeData {
 			trimmed := strings.TrimSpace(data)
 			if trimmed != "" && !contains(validData, trimmed) {
-				return fmt.Errorf("WAKATIME_DATA contains invalid value '%s'. Valid values: %s", trimmed, strings.Join(validData, ", "))
+				return fmt.Errorf("WAKATIME_DATA contains invalid value. Valid values: %s", strings.Join(validData, ", "))
 			}
 		}
 	}
@@ -216,12 +216,12 @@ func (c *Config) Validate() error {
 	for _, metric := range c.ShowMetrics {
 		trimmed := strings.TrimSpace(metric)
 		if trimmed != "" && !contains(validMetrics, trimmed) {
-			return fmt.Errorf("SHOW_METRICS contains invalid value '%s'. Valid values: %s", trimmed, strings.Join(validMetrics, ", "))
+			return fmt.Errorf("SHOW_METRICS contains invalid value. Valid values: %s", strings.Join(validMetrics, ", "))
 		}
 	}
 
 	if c.ProgressBarVersion != "" && c.ProgressBarVersion != ProgressBarVersion1 && c.ProgressBarVersion != ProgressBarVersion2 {
-		return fmt.Errorf("PROGRESS_BAR_VERSION must be '%s' or '%s' (got: %s)", ProgressBarVersion1, ProgressBarVersion2, c.ProgressBarVersion)
+		return fmt.Errorf("PROGRESS_BAR_VERSION must be '%s' or '%s'", ProgressBarVersion1, ProgressBarVersion2)
 	}
 
 	return nil

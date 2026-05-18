@@ -1,7 +1,9 @@
 package main
 
 import (
+	"bytes"
 	"errors"
+	"io"
 	"os"
 	"os/exec"
 	"path/filepath"
@@ -142,6 +144,78 @@ func TestSanitizeError(t *testing.T) {
 			}
 		})
 	}
+}
+
+func TestRunGitCommand_RedactsOutputWhenRepoInfoVisible(t *testing.T) {
+	dir := t.TempDir()
+	gitPath := filepath.Join(dir, "git")
+	script := "#!/bin/sh\n" +
+		"echo \"stdout https://ghp_secret@github.com/alice/private.git\"\n" +
+		"echo \"stderr https://ghp_secret@github.com/alice/private.git bare ghp_secret\" >&2\n"
+	if err := os.WriteFile(gitPath, []byte(script), 0755); err != nil {
+		t.Fatal(err)
+	}
+	t.Setenv("PATH", dir+string(os.PathListSeparator)+os.Getenv("PATH"))
+
+	stdout, stderr := captureStdoutStderr(t, func() {
+		if err := runGitCommand(false, "push", "origin", "main"); err != nil {
+			t.Fatalf("runGitCommand returned error: %v", err)
+		}
+	})
+
+	combined := stdout + stderr
+	for _, forbidden := range []string{"ghp_secret", "github.com", "alice", "private.git"} {
+		if strings.Contains(combined, forbidden) {
+			t.Fatalf("git output leaked %q:\nstdout=%s\nstderr=%s", forbidden, stdout, stderr)
+		}
+	}
+	if !strings.Contains(combined, "[***]") {
+		t.Fatalf("expected redacted marker in git output, got stdout=%s stderr=%s", stdout, stderr)
+	}
+}
+
+func captureStdoutStderr(t *testing.T, fn func()) (string, string) {
+	t.Helper()
+
+	oldStdout := os.Stdout
+	oldStderr := os.Stderr
+	stdoutReader, stdoutWriter, err := os.Pipe()
+	if err != nil {
+		t.Fatal(err)
+	}
+	stderrReader, stderrWriter, err := os.Pipe()
+	if err != nil {
+		t.Fatal(err)
+	}
+	os.Stdout = stdoutWriter
+	os.Stderr = stderrWriter
+	defer func() {
+		os.Stdout = oldStdout
+		os.Stderr = oldStderr
+	}()
+
+	var stdoutBuf, stderrBuf bytes.Buffer
+	stdoutDone := make(chan struct{})
+	stderrDone := make(chan struct{})
+	go func() {
+		_, _ = io.Copy(&stdoutBuf, stdoutReader)
+		close(stdoutDone)
+	}()
+	go func() {
+		_, _ = io.Copy(&stderrBuf, stderrReader)
+		close(stderrDone)
+	}()
+
+	fn()
+
+	_ = stdoutWriter.Close()
+	_ = stderrWriter.Close()
+	<-stdoutDone
+	<-stderrDone
+	_ = stdoutReader.Close()
+	_ = stderrReader.Close()
+
+	return stdoutBuf.String(), stderrBuf.String()
 }
 
 func TestSanitizeError_EdgeCases(t *testing.T) {

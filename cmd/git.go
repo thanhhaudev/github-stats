@@ -2,6 +2,7 @@ package main
 
 import (
 	"bytes"
+	"errors"
 	"fmt"
 	"os"
 	"os/exec"
@@ -74,13 +75,12 @@ func commitAndPushReadme(msg, branch string, hideRepoInfo bool) error {
 
 func runGitCommand(hideRepoInfo bool, args ...string) error {
 	cmd := exec.Command("git", args...)
+	var stdout, stderr bytes.Buffer
+	cmd.Stdout = &stdout
+	cmd.Stderr = &stderr
 
 	if hideRepoInfo {
 		// Suppress output when HIDE_REPO_INFO is true to prevent leaking sensitive information
-		var stdout, stderr bytes.Buffer
-		cmd.Stdout = &stdout
-		cmd.Stderr = &stderr
-
 		if err := cmd.Run(); err != nil {
 			// Sanitize error output before returning
 			sanitizedErr := err.Error()
@@ -95,14 +95,26 @@ func runGitCommand(hideRepoInfo bool, args ...string) error {
 			return fmt.Errorf("failed to run git command: %v", sanitizedErr)
 		}
 	} else {
-		cmd.Stdout = os.Stdout
-		cmd.Stderr = os.Stderr
 		if err := cmd.Run(); err != nil {
-			return fmt.Errorf("failed to run 'git %v': %v", args, err)
+			writeSanitizedGitOutput(os.Stdout, stdout.String())
+			writeSanitizedGitOutput(os.Stderr, stderr.String())
+
+			return fmt.Errorf("failed to run 'git %v': %v", args, sanitizeError(err, "", ""))
 		}
+
+		writeSanitizedGitOutput(os.Stdout, stdout.String())
+		writeSanitizedGitOutput(os.Stderr, stderr.String())
 	}
 
 	return nil
+}
+
+func writeSanitizedGitOutput(w *os.File, output string) {
+	if output == "" {
+		return
+	}
+
+	_, _ = fmt.Fprint(w, sanitizeError(errors.New(output), "", ""))
 }
 
 // sanitizeError removes sensitive information from error messages
@@ -117,6 +129,9 @@ func sanitizeError(err error, token, owner string) error {
 	if token != "" {
 		errMsg = strings.ReplaceAll(errMsg, token, "[***]")
 	}
+
+	gitHubTokenRegex := regexp.MustCompile(`\b(?:gh[opsu]_[A-Za-z0-9_]+|github_pat_[A-Za-z0-9_]+)\b`)
+	errMsg = gitHubTokenRegex.ReplaceAllString(errMsg, "[***]")
 
 	// Replace owner/username with placeholder
 	if owner != "" {

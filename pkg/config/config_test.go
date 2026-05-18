@@ -104,6 +104,15 @@ func TestConfig_Validate(t *testing.T) {
 			errMsg:  "SHOW_METRICS contains invalid value",
 		},
 		{
+			name: "invalid SHOW_METRICS value does not echo raw input",
+			config: &Config{
+				GitHubToken: "ghp_test123",
+				ShowMetrics: []string{"ghp_secret_token"},
+			},
+			wantErr: true,
+			errMsg:  "SHOW_METRICS contains invalid value",
+		},
+		{
 			name: "invalid PROGRESS_BAR_VERSION",
 			config: &Config{
 				GitHubToken:        "ghp_test123",
@@ -153,6 +162,9 @@ func TestConfig_Validate(t *testing.T) {
 			}
 			if tt.wantErr && err != nil && !strings.Contains(err.Error(), tt.errMsg) {
 				t.Errorf("Config.Validate() error = %v, want error containing %v", err, tt.errMsg)
+			}
+			if err != nil && strings.Contains(err.Error(), "ghp_secret_token") {
+				t.Errorf("Config.Validate() error leaked raw invalid value: %v", err)
 			}
 		})
 	}
