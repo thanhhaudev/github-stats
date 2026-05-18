@@ -19,6 +19,8 @@ type fakeDataClientManager struct {
 	branches   []github.Branch
 	commitErr  error
 	commitRefs []string
+	wakaStats  *wakatime.Stats
+	allTime    *wakatime.AllTimeSinceTodayStats
 }
 
 func (f *fakeDataClientManager) HasGitHubClient() bool {
@@ -26,7 +28,7 @@ func (f *fakeDataClientManager) HasGitHubClient() bool {
 }
 
 func (f *fakeDataClientManager) HasWakaTimeClient() bool {
-	return false
+	return f.wakaStats != nil || f.allTime != nil
 }
 
 func (f *fakeDataClientManager) GetBranches(ctx context.Context, owner, name string, numBranches int) ([]github.Branch, error) {
@@ -60,11 +62,11 @@ func (f *fakeDataClientManager) GetContributedToRepositories(ctx context.Context
 }
 
 func (f *fakeDataClientManager) GetWakaTimeStats(ctx context.Context) (*wakatime.Stats, error) {
-	return nil, nil
+	return f.wakaStats, nil
 }
 
 func (f *fakeDataClientManager) GetWakaTimeAllTimeSinceToday(ctx context.Context) (*wakatime.AllTimeSinceTodayStats, error) {
-	return nil, nil
+	return f.allTime, nil
 }
 
 func TestDataContainerInitCommitsReturnsBranchError(t *testing.T) {

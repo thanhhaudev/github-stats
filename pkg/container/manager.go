@@ -10,14 +10,28 @@ import (
 type ClientManager struct {
 	WakaTimeClient *wakatime.WakaTime
 	GitHubClient   *github.GitHub
+	repositories   repositoryService
+	viewer         viewerService
 }
 
 func (c *ClientManager) HasGitHubClient() bool {
-	return c != nil && c.GitHubClient != nil
+	return c != nil && c.repositories != nil && c.viewer != nil
 }
 
 func (c *ClientManager) HasWakaTimeClient() bool {
 	return c != nil && c.WakaTimeClient != nil
+}
+
+type repositoryService interface {
+	Commits(ctx context.Context, request *github.Request) (*github.Commits, error)
+	Branches(ctx context.Context, request *github.Request) (*github.Branches, error)
+	Owned(ctx context.Context, request *github.Request) (*github.Repositories, error)
+	ContributedTo(ctx context.Context, request *github.Request) (*github.Repositories, error)
+	DefaultBranch(ctx context.Context, request *github.Request) (*github.Branch, error)
+}
+
+type viewerService interface {
+	Get(ctx context.Context, request *github.Request) (*github.Viewer, error)
 }
 
 // GetCommits returns the commits of a repository
@@ -38,7 +52,7 @@ func (c *ClientManager) GetCommits(ctx context.Context, owner, name, authorID, b
 			request.Var("afterCursor", *cursor)
 		}
 
-		commits, err := c.GitHubClient.Repositories.Commits(ctx, request)
+		commits, err := c.repositories.Commits(ctx, request)
 		if err != nil {
 			return nil, err
 		}
@@ -73,7 +87,7 @@ func (c *ClientManager) GetBranches(ctx context.Context, owner, name string, num
 			request.Var("afterCursor", *cursor)
 		}
 
-		branches, err := c.GitHubClient.Repositories.Branches(ctx, request)
+		branches, err := c.repositories.Branches(ctx, request)
 		if err != nil {
 			return nil, err
 		}
@@ -108,7 +122,7 @@ func (c *ClientManager) GetOwnedRepositories(ctx context.Context, username strin
 			request.Var("afterCursor", *cursor)
 		}
 
-		repos, err := c.GitHubClient.Repositories.Owned(ctx, request)
+		repos, err := c.repositories.Owned(ctx, request)
 		if err != nil {
 			return nil, err
 		}
@@ -144,7 +158,7 @@ func (c *ClientManager) GetContributedToRepositories(ctx context.Context, userna
 			request.Var("afterCursor", *cursor)
 		}
 
-		repos, err := c.GitHubClient.Repositories.ContributedTo(ctx, request)
+		repos, err := c.repositories.ContributedTo(ctx, request)
 		if err != nil {
 			return nil, err
 		}
@@ -168,7 +182,7 @@ func (c *ClientManager) GetContributedToRepositories(ctx context.Context, userna
 // GetViewer returns the viewer's information
 func (c *ClientManager) GetViewer(ctx context.Context) (*github.Viewer, error) {
 	request := github.NewRequest(github.Queries["viewer"])
-	viewer, err := c.GitHubClient.Viewer.Get(ctx, request)
+	viewer, err := c.viewer.Get(ctx, request)
 	if err != nil {
 		return nil, err
 	}
@@ -182,7 +196,7 @@ func (c *ClientManager) GetDefaultBranch(ctx context.Context, owner, name string
 	request.Var("owner", owner)
 	request.Var("name", name)
 
-	branch, err := c.GitHubClient.Repositories.DefaultBranch(ctx, request)
+	branch, err := c.repositories.DefaultBranch(ctx, request)
 	if err != nil {
 		return nil, err
 	}
@@ -212,5 +226,11 @@ func (c *ClientManager) GetWakaTimeAllTimeSinceToday(ctx context.Context) (*waka
 
 // NewClientManager creates a new ClientManager
 func NewClientManager(w *wakatime.WakaTime, g *github.GitHub) *ClientManager {
-	return &ClientManager{w, g}
+	cm := &ClientManager{WakaTimeClient: w, GitHubClient: g}
+	if g != nil {
+		cm.repositories = g.Repositories
+		cm.viewer = g.Viewer
+	}
+
+	return cm
 }
