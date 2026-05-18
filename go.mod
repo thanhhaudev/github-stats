@@ -1,6 +1,6 @@
 module github.com/thanhhaudev/github-stats
 
-go 1.24.0
+go 1.26.3
 
 require (
 	github.com/joho/godotenv v1.5.1
