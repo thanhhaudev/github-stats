@@ -2,6 +2,7 @@ package container
 
 import (
 	"context"
+	"errors"
 	"fmt"
 	"log"
 	"strings"
@@ -340,6 +341,11 @@ func (d *DataContainer) InitWakaStats(ctx context.Context) error {
 
 	v, err := d.ClientManager.GetWakaTimeStats(ctx)
 	if err != nil {
+		if errors.Is(err, wakatime.ErrStatsNotReady) {
+			d.restoreCachedWakaTimeStats()
+			return nil
+		}
+
 		return err
 	}
 
@@ -350,6 +356,8 @@ func (d *DataContainer) InitWakaStats(ctx context.Context) error {
 			if !d.Config.SimpleLogs {
 				d.Logger.Println("WakaTime is not ready yet")
 			}
+			d.restoreCachedWakaTimeStats()
+			return nil
 		default:
 			if !d.Config.SimpleLogs {
 				d.Logger.Println("An error occurred while fetching WakaTime data:", v.Data.Status)
@@ -367,6 +375,11 @@ func (d *DataContainer) InitWakaStats(ctx context.Context) error {
 	}
 	allTimeStats, err := d.ClientManager.GetWakaTimeAllTimeSinceToday(ctx)
 	if err != nil {
+		if errors.Is(err, wakatime.ErrStatsNotReady) {
+			d.restoreCachedWakaTimeStats()
+			return nil
+		}
+
 		if !d.Config.SimpleLogs {
 			d.Logger.Println("An error occurred while fetching WakaTime all-time data:", err)
 		}
@@ -374,7 +387,39 @@ func (d *DataContainer) InitWakaStats(ctx context.Context) error {
 		d.Data.WakaTimeAllTime = allTimeStats
 	}
 
+	d.cacheWakaTimeStats()
+
 	return nil
+}
+
+func (d *DataContainer) restoreCachedWakaTimeStats() bool {
+	if d.Cache == nil {
+		return false
+	}
+
+	stats, allTime, ok := d.Cache.LookupWakaTime(d.Config.WakaTimeRange)
+	if !ok {
+		if !d.Config.SimpleLogs {
+			d.Logger.Println("No cached WakaTime data available; skipping WakaTime metrics for this run")
+		}
+		return false
+	}
+
+	d.Data.WakaTime = stats
+	d.Data.WakaTimeAllTime = allTime
+	if !d.Config.SimpleLogs {
+		d.Logger.Println("Reusing cached WakaTime data")
+	}
+
+	return true
+}
+
+func (d *DataContainer) cacheWakaTimeStats() {
+	if d.Cache == nil || d.Data.WakaTime == nil {
+		return
+	}
+
+	d.Cache.SetWakaTime(d.Config.WakaTimeRange, d.Data.WakaTime, d.Data.WakaTimeAllTime)
 }
 
 // Build builds the data container

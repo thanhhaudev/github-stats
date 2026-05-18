@@ -27,6 +27,7 @@ type Stats struct {
 	Data struct {
 		Status           string      `json:"status"`
 		Range            string      `json:"range"`
+		IsUpToDate       *bool       `json:"is_up_to_date"`
 		Languages        []StatsItem `json:"languages"`
 		Editors          []StatsItem `json:"editors"`
 		Projects         []StatsItem `json:"projects"`
@@ -95,10 +96,16 @@ func (s *StatsService) Get(ctx context.Context) (*Stats, error) {
 		if errors.As(err, &wakaTimeErr) && wakaTimeErr.IsNotCompleted() {
 			s.Logger.Println("WakaTime processing has not completed yet, please retry after a few minutes")
 
-			return &stats, nil
+			return nil, ErrStatsNotReady
 		}
 
 		return nil, err
+	}
+
+	if stats.Data.Status == "pending_update" || stats.Data.IsUpToDate != nil && !*stats.Data.IsUpToDate {
+		s.Logger.Println("WakaTime stats are stale; please retry after a few minutes")
+
+		return nil, ErrStatsNotReady
 	}
 
 	return &stats, nil
@@ -114,7 +121,7 @@ func (s *StatsService) GetAllTimeSinceToday(ctx context.Context) (*AllTimeSinceT
 		if errors.As(err, &wakaTimeErr) && wakaTimeErr.IsNotCompleted() {
 			s.Logger.Println("WakaTime all-time stats processing has not completed yet, please retry after a few minutes")
 
-			return &stats, nil
+			return nil, ErrStatsNotReady
 		}
 
 		return nil, err

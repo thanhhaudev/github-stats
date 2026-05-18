@@ -29,6 +29,7 @@
              WAKATIME_API_KEY: ${{ secrets.WAKATIME_API_KEY }}
              SHOW_METRICS: "CODING_STREAK"
    ```
+   > ⚠️ For long-term use, fork this repository and run your forked Action, or pin to a specific release/SHA instead of relying on `thanhhaudev/github-stats@v1`. This avoids unexpected behavior changes when the upstream `v1` tag moves.
 5. Trigger once: **Actions → Update README Stats → Run workflow**.
 
 ## Sample output

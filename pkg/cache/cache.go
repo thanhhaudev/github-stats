@@ -1,5 +1,6 @@
-// Package cache persists fetched GitHub data between Action runs so we can
-// skip re-fetching commits for repos whose pushedAt has not advanced.
+// Package cache persists fetched GitHub and WakaTime data between Action runs
+// so we can skip re-fetching commits for repos whose pushedAt has not advanced
+// and replay the last ready WakaTime stats when the API is still processing.
 //
 // The file is intended to be restored/saved by actions/cache@v4 in the user's
 // workflow. We do not commit it anywhere; if the file is missing or its schema
@@ -15,6 +16,7 @@ import (
 	"time"
 
 	"github.com/thanhhaudev/github-stats/pkg/github"
+	"github.com/thanhhaudev/github-stats/pkg/wakatime"
 )
 
 // SchemaVersion bumps whenever the on-disk format changes incompatibly.
@@ -30,11 +32,19 @@ type RepoEntry struct {
 	Commits  []github.Commit `json:"commits"`
 }
 
+type WakaTimeEntry struct {
+	CachedAt time.Time                        `json:"cachedAt"`
+	Range    string                           `json:"range"`
+	Stats    *wakatime.Stats                  `json:"stats"`
+	AllTime  *wakatime.AllTimeSinceTodayStats `json:"allTime"`
+}
+
 type Cache struct {
 	Version        int                   `json:"version"`
 	CachedAt       time.Time             `json:"cachedAt"`
 	OnlyMainBranch bool                  `json:"onlyMainBranch"`
 	Repos          map[string]*RepoEntry `json:"repos"`
+	WakaTime       *WakaTimeEntry        `json:"wakaTime,omitempty"`
 
 	mu sync.Mutex
 }
@@ -131,6 +141,33 @@ func (c *Cache) Set(repoURL string, pushedAt time.Time, commits []github.Commit)
 		PushedAt: pushedAt,
 		Commits:  commits,
 	}
+}
+
+func (c *Cache) SetWakaTime(statsRange string, stats *wakatime.Stats, allTime *wakatime.AllTimeSinceTodayStats) {
+	if stats == nil {
+		return
+	}
+
+	c.mu.Lock()
+	defer c.mu.Unlock()
+
+	c.WakaTime = &WakaTimeEntry{
+		CachedAt: time.Now().UTC(),
+		Range:    statsRange,
+		Stats:    stats,
+		AllTime:  allTime,
+	}
+}
+
+func (c *Cache) LookupWakaTime(statsRange string) (*wakatime.Stats, *wakatime.AllTimeSinceTodayStats, bool) {
+	c.mu.Lock()
+	defer c.mu.Unlock()
+
+	if c.WakaTime == nil || c.WakaTime.Stats == nil || c.WakaTime.Range != statsRange {
+		return nil, nil, false
+	}
+
+	return c.WakaTime.Stats, c.WakaTime.AllTime, true
 }
 
 // Prune removes entries whose URL is not in keepURLs. Used to drop cache for

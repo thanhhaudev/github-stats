@@ -9,6 +9,7 @@ import (
 	"time"
 
 	"github.com/thanhhaudev/github-stats/pkg/github"
+	"github.com/thanhhaudev/github-stats/pkg/wakatime"
 )
 
 func tempCachePath(t *testing.T) string {
@@ -110,6 +111,50 @@ func TestSaveLoadRoundTrip(t *testing.T) {
 	}
 	if len(entry.Commits) != 1 || entry.Commits[0].OID != "abc" {
 		t.Errorf("commits not round-tripped: %+v", entry.Commits)
+	}
+}
+
+func TestSaveLoadRoundTrip_WakaTime(t *testing.T) {
+	path := tempCachePath(t)
+	stats := &wakatime.Stats{}
+	stats.Data.Status = "ok"
+	stats.Data.Range = "last_7_days"
+	stats.Data.Languages = []wakatime.StatsItem{{Name: "Go", Text: "1 hr", Hours: 1, Percent: 100}}
+	allTime := &wakatime.AllTimeSinceTodayStats{}
+	allTime.Data.Text = "10 hrs"
+
+	original := &Cache{
+		Version:        SchemaVersion,
+		OnlyMainBranch: false,
+		Repos:          make(map[string]*RepoEntry),
+	}
+	original.SetWakaTime("last_7_days", stats, allTime)
+
+	if err := original.Save(path); err != nil {
+		t.Fatal(err)
+	}
+
+	loaded := Load(path, false)
+	gotStats, gotAllTime, ok := loaded.LookupWakaTime("last_7_days")
+	if !ok {
+		t.Fatal("expected cached WakaTime data after round-trip")
+	}
+	if gotStats.Data.Range != "last_7_days" || gotStats.Data.Languages[0].Name != "Go" {
+		t.Errorf("stats not round-tripped: %+v", gotStats)
+	}
+	if gotAllTime.Data.Text != "10 hrs" {
+		t.Errorf("all-time stats not round-tripped: %+v", gotAllTime)
+	}
+}
+
+func TestLookupWakaTime_MissesWhenRangeChanged(t *testing.T) {
+	c := &Cache{Repos: make(map[string]*RepoEntry)}
+	stats := &wakatime.Stats{}
+	allTime := &wakatime.AllTimeSinceTodayStats{}
+	c.SetWakaTime("last_7_days", stats, allTime)
+
+	if _, _, ok := c.LookupWakaTime("last_30_days"); ok {
+		t.Fatal("expected miss when cached WakaTime range differs")
 	}
 }
 

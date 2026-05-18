@@ -1,9 +1,12 @@
 package wakatime
 
 import (
+	"errors"
 	"fmt"
 	"net/http"
 )
+
+var ErrStatsNotReady = errors.New("wakatime stats are not ready")
 
 type WakaTimeError struct {
 	StatusCode int

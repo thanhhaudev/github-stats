@@ -29,12 +29,13 @@ jobs:
           ENABLE_CACHE: "true"
 ```
 
-> ⚠️ Add `.github-stats-cache.json` to your profile repo's `.gitignore`. The cache holds repo URLs (including private) and commit metadata — fine inside GitHub Actions cache, not fine inside your public profile repo.
+> ⚠️ Add `.github-stats-cache.json` to your profile repo's `.gitignore`. The cache holds repo URLs (including private), commit metadata, and WakaTime stats such as project/language/editor names — fine inside GitHub Actions cache, not fine inside your public profile repo.
 
 ## How it works
 
 - The action stores fetched repo metadata + commits in `CACHE_FILE` (`.github-stats-cache.json` by default).
 - Each run queries every repo's `pushedAt`. Unchanged repos reuse cached commits and skip the API calls.
+- When WakaTime is enabled, successful WakaTime stats are also cached. If a later WakaTime response is still processing (`202`, `pending_update`, or `is_up_to_date=false`), the action reuses the cached WakaTime stats and still updates GitHub-based metrics.
 - Cached repos that no longer exist (deleted, transferred) are pruned automatically.
 - The cache schema is versioned. Schema upgrades invalidate the cache.
 - Toggling `ONLY_MAIN_BRANCH` invalidates the cache (the two modes return different commit sets).
@@ -43,7 +44,7 @@ jobs:
 
 - GitHub evicts caches after 7 days of inactivity.
 - The first run after a cache miss is as slow as today — caching only helps subsequent runs.
-- WakaTime stats are not cached (they are aggregates over a time range, not incrementally fetchable).
+- On the first run with no cached WakaTime data, a stale WakaTime response means WakaTime blocks are omitted for that run while GitHub metrics continue to update.
 
 ## Security
 
