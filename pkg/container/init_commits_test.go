@@ -95,3 +95,24 @@ func TestDataContainerInitCommitsReturnsBranchError(t *testing.T) {
 		t.Fatalf("expected error to include repo and branch context, got %v", err)
 	}
 }
+
+func TestDataContainerInitCommitsDoesNotRequireContextClock(t *testing.T) {
+	cm := &fakeDataClientManager{}
+	cfg := &config.Config{OnlyMainBranch: true, SimpleLogs: true}
+	d := NewDataContainer(log.Default(), cm, cfg)
+	d.Data.Viewer = &github.Viewer{ID: "viewer-id"}
+	repo := github.Repository{Name: "repo-one", Url: "https://github.com/acme/repo-one"}
+	repo.Owner.Login = "acme"
+	d.Data.Repositories = []github.Repository{repo}
+
+	if err := d.InitCommits(context.Background()); err != nil {
+		t.Fatalf("InitCommits returned error: %v", err)
+	}
+
+	if len(d.Data.Commits) != 1 {
+		t.Fatalf("expected one commit, got %d", len(d.Data.Commits))
+	}
+	if d.Data.Commits[0].OID != "refs/heads/main" {
+		t.Fatalf("expected default branch commit, got %q", d.Data.Commits[0].OID)
+	}
+}

@@ -42,6 +42,7 @@ func main() {
 	gc := github.NewGitHub(cfg.GitHubToken, cfg.Debug, cfg.HideRepoInfo)
 	wc := wakatime.NewWakaTime(logger, cfg.WakaTimeAPIKey, wakatime.StatsRange(cfg.WakaTimeRange))
 	dc := container.NewDataContainer(logger, container.NewClientManager(wc, gc), cfg)
+	dc.SetClock(cl)
 	if err := runGroupedStep(logger, "Build data container", cfg.EnableGitHubGroups, func() error {
 		return dc.Build(ctx)
 	}); err != nil {

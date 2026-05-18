@@ -28,6 +28,7 @@ type DataContainer struct {
 	ClientManager dataClientManager
 	Logger        *log.Logger
 	Config        *config.Config
+	Clock         clock.Clock
 	Cache         *cache.Cache // nil when caching is disabled
 	Data          struct {
 		Viewer          *github.Viewer
@@ -281,7 +282,7 @@ func (d *DataContainer) InitCommits(ctx context.Context) error {
 		for _, commit := range result.commits {
 			if !seenOIDs[commit.OID] {
 				seenOIDs[commit.OID] = true
-				commit.CommittedDate = ctx.Value(clock.ClockKey{}).(clock.Clock).ToClockTz(commit.CommittedDate)
+				commit.CommittedDate = d.Clock.ToClockTz(commit.CommittedDate)
 				d.Data.Commits = append(d.Data.Commits, commit)
 			}
 		}
@@ -542,7 +543,16 @@ func NewDataContainer(l *log.Logger, cm dataClientManager, cfg *config.Config) *
 		Logger:        l,
 		ClientManager: cm,
 		Config:        cfg,
+		Clock:         clock.NewClock(),
 	}
+}
+
+func (d *DataContainer) SetClock(cl clock.Clock) {
+	if cl == nil {
+		return
+	}
+
+	d.Clock = cl
 }
 
 func cacheEnabledLogMessage(hidden bool, cachePath string, entryCount int) string {
