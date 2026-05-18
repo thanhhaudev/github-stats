@@ -6,6 +6,23 @@ All notable changes to this project will be documented in this file. Format foll
 
 ## [Unreleased]
 
+## [1.5.5] - 2026-05-18
+
+### Added
+- Root `Makefile` targets for local development, including GitHub CLI-backed runs that avoid storing `GITHUB_TOKEN` in `cmd/.env`.
+- Focused regression coverage for commit fetching, WakaTime cache fallback, README marker replacement, pagination, and config metadata parity.
+
+### Changed
+- Upgrade the Go module, Docker builder image, and CI setup to Go 1.26.3.
+- Make `pkg/container` receive its clock dependency explicitly instead of requiring a context value.
+- Make commit fetching return deterministic repository-level results while branch fetches run concurrently.
+
+### Fixed
+- Redact sensitive runtime logs.
+- Compact AI footprint line counts.
+- Preserve valid UTF-8 when truncating Unicode stats labels.
+- Return branch fetch failures with repo and branch context instead of sharing a top-level error channel across repo and branch workers.
+
 ## [1.5.4] - 2026-05-18
 
 ### Changed
@@ -30,6 +47,7 @@ All notable changes to this project will be documented in this file. Format foll
 ### Fixed
 - AI footprint row label: `Total Prompt Chars` (raw `ai_prompt_length`) replaces the misleading `Average Prompt` while WakaTime omits `ai_average_prompt_length` from `/stats`. Reverts to `Average Prompt` automatically once the field appears.
 
-[Unreleased]: https://github.com/thanhhaudev/github-stats/compare/v1.5.4...HEAD
+[Unreleased]: https://github.com/thanhhaudev/github-stats/compare/v1.5.5...HEAD
+[1.5.5]: https://github.com/thanhhaudev/github-stats/releases/tag/v1.5.5
 [1.5.4]: https://github.com/thanhhaudev/github-stats/releases/tag/v1.5.4
 [1.5.3]: https://github.com/thanhhaudev/github-stats/releases/tag/v1.5.3
