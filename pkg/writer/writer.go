@@ -7,7 +7,6 @@ import (
 	"strings"
 	"time"
 	"unicode"
-	"unicode/utf8"
 
 	"github.com/thanhhaudev/github-stats/pkg/github"
 	"github.com/thanhhaudev/github-stats/pkg/wakatime"
@@ -480,11 +479,23 @@ func max(a, b int) int {
 }
 
 func truncateString(s string, l int) string {
-	if utf8.RuneCountInString(s) > l {
-		return s[:l]
+	if l <= 0 {
+		return ""
 	}
 
-	return s
+	width := 0
+	var b strings.Builder
+	for _, r := range s {
+		runeWidth := displayWidth(string(r))
+		if width+runeWidth > l {
+			break
+		}
+
+		b.WriteRune(r)
+		width += runeWidth
+	}
+
+	return b.String()
 }
 
 func addCommas(n int) string {

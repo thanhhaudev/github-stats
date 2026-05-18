@@ -4,10 +4,25 @@ import (
 	"strings"
 	"testing"
 	"time"
+	"unicode/utf8"
 
 	"github.com/thanhhaudev/github-stats/pkg/github"
 	"github.com/thanhhaudev/github-stats/pkg/wakatime"
 )
+
+func TestTruncateStringPreservesUTF8(t *testing.T) {
+	input := "Tiếng Việt 日本語 🚀🚀🚀 rất dài"
+	const limit = 4
+
+	got := truncateString(input, limit)
+
+	if !utf8.ValidString(got) {
+		t.Fatalf("truncateString returned invalid UTF-8: %q", got)
+	}
+	if displayWidth(got) > limit {
+		t.Fatalf("display width = %d, want <= %d for %q", displayWidth(got), limit, got)
+	}
+}
 
 func TestFormatCountLine(t *testing.T) {
 	tests := []struct {
