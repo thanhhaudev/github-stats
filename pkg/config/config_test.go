@@ -1,6 +1,7 @@
 package config
 
 import (
+	"os"
 	"strings"
 	"testing"
 )
@@ -168,4 +169,82 @@ func TestConfig_Validate(t *testing.T) {
 			}
 		})
 	}
+}
+
+func TestPublicEnvKeysAreDocumentedAndExposedByAction(t *testing.T) {
+	actionYAML := readProjectFile(t, "../../action.yml")
+	configurationDocs := readProjectFile(t, "../../docs/configuration.md")
+
+	publicEnvKeys := []string{
+		"GITHUB_TOKEN",
+		"WAKATIME_API_KEY",
+		"WAKATIME_RANGE",
+		"WAKATIME_DATA",
+		"SHOW_METRICS",
+		"SHOW_LAST_UPDATE",
+		"TIME_LAYOUT",
+		"TIME_ZONE",
+		"PROGRESS_BAR_VERSION",
+		"SIMPLIFY_COMMIT_TIMES_TITLE",
+		"DRY_RUN",
+		"DEBUG",
+		"SIMPLE_LOGS",
+		"COMMIT_USER_NAME",
+		"COMMIT_USER_EMAIL",
+		"COMMIT_MESSAGE",
+		"BRANCH_NAME",
+		"SECTION_NAME",
+		"HIDE_REPO_INFO",
+		"EXCLUDE_FORK_REPOS",
+		"ONLY_MAIN_BRANCH",
+		"ENABLE_CACHE",
+		"CACHE_FILE",
+	}
+
+	for _, key := range publicEnvKeys {
+		if !strings.Contains(configurationDocs, "`"+key+"`") {
+			t.Errorf("docs/configuration.md missing env key: %s", key)
+		}
+		if !strings.Contains(actionYAML, "  "+key+":\n") {
+			t.Errorf("action.yml inputs missing env key: %s", key)
+		}
+		if !strings.Contains(actionYAML, "    "+key+": ${{ inputs."+key+" }}") {
+			t.Errorf("action.yml runtime env missing input mapping for: %s", key)
+		}
+	}
+}
+
+func TestMetricKeysAreDocumented(t *testing.T) {
+	configurationDocs := readProjectFile(t, "../../docs/configuration.md")
+	metricsDocs := readProjectFile(t, "../../docs/metrics.md")
+
+	metricKeys := []string{
+		MetricLanguagePerRepo,
+		MetricLanguagesAndTools,
+		MetricCommitDaysOfWeek,
+		MetricCommitTimesOfDay,
+		MetricWakaTimeSpentTime,
+		MetricCodingStreak,
+		MetricWakaTimeAIStats,
+	}
+
+	for _, key := range metricKeys {
+		if !strings.Contains(configurationDocs, key) {
+			t.Errorf("docs/configuration.md missing metric key: %s", key)
+		}
+		if !strings.Contains(metricsDocs, "`"+key+"`") {
+			t.Errorf("docs/metrics.md missing metric key: %s", key)
+		}
+	}
+}
+
+func readProjectFile(t *testing.T, path string) string {
+	t.Helper()
+
+	b, err := os.ReadFile(path)
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	return string(b)
 }

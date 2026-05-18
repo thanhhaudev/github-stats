@@ -26,11 +26,20 @@ inputs:
   SHOW_LAST_UPDATE:
     description: 'Show last update in the readme'
     required: false
+  PROGRESS_BAR_VERSION:
+    description: 'Progress bar style version'
+    required: false
   ONLY_MAIN_BRANCH:
     description: "Only use main branch's commits"
     required: false
   HIDE_REPO_INFO:
     description: 'Hide repository information'
+    required: false
+  DRY_RUN:
+    description: 'Update README without committing or pushing changes'
+    required: false
+  DEBUG:
+    description: 'Enable verbose logs'
     required: false
   COMMIT_MESSAGE:
     description: 'Commit message'
@@ -40,6 +49,12 @@ inputs:
     required: false
   COMMIT_USER_EMAIL:
     description: 'Commit user email'
+    required: false
+  BRANCH_NAME:
+    description: 'Branch to push README updates to'
+    required: false
+  SECTION_NAME:
+    description: 'README marker section name'
     required: false
   LANGUAGES_AND_TOOLS:
     description: 'Languages and tools used in the repositories'
@@ -71,11 +86,16 @@ runs:
     TIME_ZONE: ${{ inputs.TIME_ZONE }}
     TIME_LAYOUT: ${{ inputs.TIME_LAYOUT }}
     SHOW_LAST_UPDATE: ${{ inputs.SHOW_LAST_UPDATE }}
+    PROGRESS_BAR_VERSION: ${{ inputs.PROGRESS_BAR_VERSION }}
     ONLY_MAIN_BRANCH: ${{ inputs.ONLY_MAIN_BRANCH }}
     HIDE_REPO_INFO: ${{ inputs.HIDE_REPO_INFO }}
+    DRY_RUN: ${{ inputs.DRY_RUN }}
+    DEBUG: ${{ inputs.DEBUG }}
     COMMIT_MESSAGE: ${{ inputs.COMMIT_MESSAGE }}
     COMMIT_USER_NAME: ${{ inputs.COMMIT_USER_NAME }}
     COMMIT_USER_EMAIL: ${{ inputs.COMMIT_USER_EMAIL }}
+    BRANCH_NAME: ${{ inputs.BRANCH_NAME }}
+    SECTION_NAME: ${{ inputs.SECTION_NAME }}
     LANGUAGES_AND_TOOLS: ${{ inputs.LANGUAGES_AND_TOOLS }}
     EXCLUDE_FORK_REPOS: ${{ inputs.EXCLUDE_FORK_REPOS }}
     SIMPLIFY_COMMIT_TIMES_TITLE: ${{ inputs.SIMPLIFY_COMMIT_TIMES_TITLE }}
