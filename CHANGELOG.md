@@ -6,6 +6,15 @@ All notable changes to this project will be documented in this file. Format foll
 
 ## [Unreleased]
 
+## [1.5.4] - 2026-05-18
+
+### Changed
+- Cache successful WakaTime stats when `ENABLE_CACHE=true`, and reuse cached WakaTime data when the API is still processing or returns stale stats.
+- README now warns users to fork the Action or pin a specific release/SHA instead of relying on the floating `v1` reference.
+
+### Fixed
+- GitHub metrics continue updating when WakaTime stats are not ready, instead of skipping the entire README update.
+
 ## [1.5.3] - 2026-05-17
 
 ### Added
@@ -21,5 +30,6 @@ All notable changes to this project will be documented in this file. Format foll
 ### Fixed
 - AI footprint row label: `Total Prompt Chars` (raw `ai_prompt_length`) replaces the misleading `Average Prompt` while WakaTime omits `ai_average_prompt_length` from `/stats`. Reverts to `Average Prompt` automatically once the field appears.
 
-[Unreleased]: https://github.com/thanhhaudev/github-stats/compare/v1.5.3...HEAD
+[Unreleased]: https://github.com/thanhhaudev/github-stats/compare/v1.5.4...HEAD
+[1.5.4]: https://github.com/thanhhaudev/github-stats/releases/tag/v1.5.4
 [1.5.3]: https://github.com/thanhhaudev/github-stats/releases/tag/v1.5.3
