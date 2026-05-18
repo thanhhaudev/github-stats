@@ -12,6 +12,14 @@ type ClientManager struct {
 	GitHubClient   *github.GitHub
 }
 
+func (c *ClientManager) HasGitHubClient() bool {
+	return c != nil && c.GitHubClient != nil
+}
+
+func (c *ClientManager) HasWakaTimeClient() bool {
+	return c != nil && c.WakaTimeClient != nil
+}
+
 // GetCommits returns the commits of a repository
 func (c *ClientManager) GetCommits(ctx context.Context, owner, name, authorID, branch string, numCommits int) ([]github.Commit, error) {
 	var allCommits []github.Commit

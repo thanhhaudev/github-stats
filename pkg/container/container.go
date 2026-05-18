@@ -8,6 +8,8 @@ import (
 	"strings"
 	"sync"
 
+	"golang.org/x/sync/errgroup"
+
 	"github.com/thanhhaudev/github-stats/pkg/cache"
 	"github.com/thanhhaudev/github-stats/pkg/clock"
 	"github.com/thanhhaudev/github-stats/pkg/config"
@@ -23,7 +25,7 @@ const (
 )
 
 type DataContainer struct {
-	ClientManager *ClientManager
+	ClientManager dataClientManager
 	Logger        *log.Logger
 	Config        *config.Config
 	Cache         *cache.Cache // nil when caching is disabled
@@ -34,6 +36,19 @@ type DataContainer struct {
 		WakaTime        *wakatime.Stats
 		WakaTimeAllTime *wakatime.AllTimeSinceTodayStats
 	}
+}
+
+type dataClientManager interface {
+	HasGitHubClient() bool
+	HasWakaTimeClient() bool
+	GetViewer(ctx context.Context) (*github.Viewer, error)
+	GetOwnedRepositories(ctx context.Context, username string, numRepos int) ([]github.Repository, error)
+	GetContributedToRepositories(ctx context.Context, username string, numRepos int) ([]github.Repository, error)
+	GetBranches(ctx context.Context, owner, name string, numBranches int) ([]github.Branch, error)
+	GetCommits(ctx context.Context, owner, name, authorID, branch string, numCommits int) ([]github.Commit, error)
+	GetDefaultBranch(ctx context.Context, owner, name string) (*github.Branch, error)
+	GetWakaTimeStats(ctx context.Context) (*wakatime.Stats, error)
+	GetWakaTimeAllTimeSinceToday(ctx context.Context) (*wakatime.AllTimeSinceTodayStats, error)
 }
 
 // metrics returns the metrics map
@@ -192,10 +207,12 @@ func (d *DataContainer) InitCommits(ctx context.Context) error {
 	fetchAllBranches := !d.Config.OnlyMainBranch
 	hiddenRepoInfo := d.Config.HideRepoInfo
 	repoCount := len(d.Data.Repositories)
-	errChan := make(chan error, repoCount)
-	commitChan := make(chan []github.Commit, repoCount)
+	type commitResult struct {
+		commits []github.Commit
+		err     error
+	}
+	resultChan := make(chan commitResult, repoCount)
 	seenOIDs := make(map[string]bool)
-	var mu sync.Mutex
 
 	mask := func(input string) string {
 		length := len(input)
@@ -231,66 +248,15 @@ func (d *DataContainer) InitCommits(ctx context.Context) error {
 					if !hiddenRepoInfo && !d.Config.SimpleLogs {
 						d.Logger.Printf("%s Reusing %d cached commits: %s\n", progress, len(cached), mask(repo.Name))
 					}
-					commitChan <- cached
-					errChan <- nil
+					resultChan <- commitResult{commits: cached}
 					return
 				}
 			}
 
-			var fetched []github.Commit
-
-			if fetchAllBranches {
-				if !hiddenRepoInfo && !d.Config.SimpleLogs {
-					d.Logger.Printf("%s Fetching commits from all branches of: %s\n", progress, mask(repo.Name))
-				}
-
-				branches, err := d.ClientManager.GetBranches(ctx, repo.Owner.Login, repo.Name, branchPerQuery)
-				if err != nil {
-					errChan <- err
-					return
-				}
-
-				var branchWg sync.WaitGroup
-				for _, branch := range branches {
-					branchWg.Add(1)
-					semaphore <- struct{}{} // Acquire a slot
-					go func(branch github.Branch) {
-						defer branchWg.Done()
-						defer func() { <-semaphore }() // Release the slot
-						commits, err := d.ClientManager.GetCommits(ctx, repo.Owner.Login, repo.Name, d.Data.Viewer.ID, fmt.Sprintf("refs/heads/%s", branch.Name), commitPerQuery)
-						if err != nil {
-							errChan <- err
-							return
-						}
-
-						mu.Lock()
-						fetched = append(fetched, commits...)
-						if !hiddenRepoInfo && d.Config.Debug && !d.Config.SimpleLogs {
-							log.Printf("%s Fetched %d commits from branch %s", progress, len(commits), mask(branch.Name))
-						}
-						mu.Unlock()
-					}(branch)
-				}
-
-				branchWg.Wait()
-			} else {
-				if !hiddenRepoInfo && !d.Config.SimpleLogs {
-					d.Logger.Printf("%s Fetching commits from default branch of: %s\n", progress, mask(repo.Name))
-				}
-
-				defaultBranch, err := d.ClientManager.GetDefaultBranch(ctx, repo.Owner.Login, repo.Name)
-				if err != nil {
-					errChan <- err
-					return
-				}
-
-				commits, err := d.ClientManager.GetCommits(ctx, repo.Owner.Login, repo.Name, d.Data.Viewer.ID, fmt.Sprintf("refs/heads/%s", defaultBranch.Name), commitPerQuery)
-				if err != nil {
-					errChan <- err
-					return
-				}
-
-				fetched = commits
+			fetched, err := d.fetchRepoCommits(ctx, repo, progress, fetchAllBranches, hiddenRepoInfo, mask, semaphore)
+			if err != nil {
+				resultChan <- commitResult{err: err}
+				return
 			}
 
 			if d.Cache != nil {
@@ -299,26 +265,20 @@ func (d *DataContainer) InitCommits(ctx context.Context) error {
 				// invalidating the cache.
 				d.Cache.Set(repo.Url, repo.PushedAt, fetched)
 			}
-			commitChan <- fetched
-			errChan <- nil
+			resultChan <- commitResult{commits: fetched}
 		}(i, repo)
 	}
 
 	go func() {
 		wg.Wait()
-		close(commitChan)
-		close(errChan)
+		close(resultChan)
 	}()
 
-	for i := 0; i < repoCount; i++ {
-		if err := <-errChan; err != nil {
-			return err
+	for result := range resultChan {
+		if result.err != nil {
+			return result.err
 		}
-	}
-
-	// Deduplicate commits
-	for commits := range commitChan {
-		for _, commit := range commits {
+		for _, commit := range result.commits {
 			if !seenOIDs[commit.OID] {
 				seenOIDs[commit.OID] = true
 				commit.CommittedDate = ctx.Value(clock.ClockKey{}).(clock.Clock).ToClockTz(commit.CommittedDate)
@@ -331,6 +291,79 @@ func (d *DataContainer) InitCommits(ctx context.Context) error {
 		d.Logger.Println("Fetched commits successfully")
 	}
 	return nil
+}
+
+func (d *DataContainer) fetchRepoCommits(
+	ctx context.Context,
+	repo github.Repository,
+	progress string,
+	fetchAllBranches bool,
+	hiddenRepoInfo bool,
+	mask func(string) string,
+	semaphore chan struct{},
+) ([]github.Commit, error) {
+	if fetchAllBranches {
+		if !hiddenRepoInfo && !d.Config.SimpleLogs {
+			d.Logger.Printf("%s Fetching commits from all branches of: %s\n", progress, mask(repo.Name))
+		}
+
+		branches, err := d.ClientManager.GetBranches(ctx, repo.Owner.Login, repo.Name, branchPerQuery)
+		if err != nil {
+			return nil, fmt.Errorf("fetch branches for repo %s: %w", repo.Name, err)
+		}
+
+		var (
+			fetched []github.Commit
+			mu      sync.Mutex
+		)
+		g, groupCtx := errgroup.WithContext(ctx)
+		for _, branch := range branches {
+			branch := branch
+			g.Go(func() error {
+				select {
+				case semaphore <- struct{}{}:
+					defer func() { <-semaphore }()
+				case <-groupCtx.Done():
+					return groupCtx.Err()
+				}
+
+				commits, err := d.ClientManager.GetCommits(groupCtx, repo.Owner.Login, repo.Name, d.Data.Viewer.ID, fmt.Sprintf("refs/heads/%s", branch.Name), commitPerQuery)
+				if err != nil {
+					return fmt.Errorf("fetch commits for repo %s branch %s: %w", repo.Name, branch.Name, err)
+				}
+
+				mu.Lock()
+				fetched = append(fetched, commits...)
+				if !hiddenRepoInfo && d.Config.Debug && !d.Config.SimpleLogs {
+					log.Printf("%s Fetched %d commits from branch %s", progress, len(commits), mask(branch.Name))
+				}
+				mu.Unlock()
+				return nil
+			})
+		}
+
+		if err := g.Wait(); err != nil {
+			return nil, err
+		}
+
+		return fetched, nil
+	}
+
+	if !hiddenRepoInfo && !d.Config.SimpleLogs {
+		d.Logger.Printf("%s Fetching commits from default branch of: %s\n", progress, mask(repo.Name))
+	}
+
+	defaultBranch, err := d.ClientManager.GetDefaultBranch(ctx, repo.Owner.Login, repo.Name)
+	if err != nil {
+		return nil, fmt.Errorf("fetch default branch for repo %s: %w", repo.Name, err)
+	}
+
+	commits, err := d.ClientManager.GetCommits(ctx, repo.Owner.Login, repo.Name, d.Data.Viewer.ID, fmt.Sprintf("refs/heads/%s", defaultBranch.Name), commitPerQuery)
+	if err != nil {
+		return nil, fmt.Errorf("fetch commits for repo %s branch %s: %w", repo.Name, defaultBranch.Name, err)
+	}
+
+	return commits, nil
 }
 
 // InitWakaStats initializes the WakaTime statistics
@@ -461,7 +494,7 @@ func (d *DataContainer) Build(ctx context.Context) error {
 	}()
 
 	// if the GitHub client is not nil, initialize the viewer, repositories, and commits
-	if d.ClientManager.GitHubClient != nil {
+	if d.ClientManager.HasGitHubClient() {
 		d.Logger.Println("Fetching data from GitHub APIs...")
 		err := d.InitViewer(ctx)
 		if err != nil {
@@ -486,7 +519,7 @@ func (d *DataContainer) Build(ctx context.Context) error {
 	}
 
 	// if the WakaTime client is not nil, fetch data from WakaTime APIs
-	if d.ClientManager.WakaTimeClient != nil {
+	if d.ClientManager.HasWakaTimeClient() {
 		d.Logger.Println("Fetching data from Wakatime APIs...")
 		err := d.InitWakaStats(ctx)
 		if err != nil {
@@ -504,7 +537,7 @@ func (d *DataContainer) Build(ctx context.Context) error {
 }
 
 // NewDataContainer creates a new DataContainer
-func NewDataContainer(l *log.Logger, cm *ClientManager, cfg *config.Config) *DataContainer {
+func NewDataContainer(l *log.Logger, cm dataClientManager, cfg *config.Config) *DataContainer {
 	return &DataContainer{
 		Logger:        l,
 		ClientManager: cm,
