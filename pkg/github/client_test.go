@@ -14,6 +14,13 @@ func TestNewClient_SetsTimeout(t *testing.T) {
 	}
 }
 
+func TestViewerQueryDoesNotRequireEmailScope(t *testing.T) {
+	query := Queries["viewer"]
+	if strings.Contains(query, "email") {
+		t.Fatalf("viewer query should not request email because it requires read:user or user:email scope:\n%s", query)
+	}
+}
+
 func TestClient_do_HidesGraphQLErrorsWhenRequested(t *testing.T) {
 	c := NewClient("ghp_secret", true, true)
 	c.httpClient = &http.Client{

@@ -4,7 +4,7 @@
 
 | Variable                      | Description                                                                                                                    | Default                     |
 |-------------------------------|--------------------------------------------------------------------------------------------------------------------------------|-----------------------------|
-| `GITHUB_TOKEN`                | **Required.** GitHub API token. Scopes `repo` + `user`.                                                                        | —                           |
+| `GITHUB_TOKEN`                | **Required.** GitHub API token. Scope `repo`.                                                                                  | —                           |
 | `SHOW_METRICS`                | **Required.** Comma-separated list of metrics. See [metrics.md](metrics.md).                                                   | —                           |
 | `WAKATIME_API_KEY`            | Required for `WAKATIME_*` metrics and time fields in `CODING_STREAK`.                                                          | —                           |
 | `WAKATIME_DATA`               | Required if `WAKATIME_SPENT_TIME` is in `SHOW_METRICS`. Comma list of `EDITORS`, `LANGUAGES`, `PROJECTS`, `OPERATING_SYSTEMS`. | —                           |

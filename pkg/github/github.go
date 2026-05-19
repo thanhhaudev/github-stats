@@ -133,7 +133,6 @@ var Queries = map[string]string{
 		id
 		login
 		name
-		email
 		createdAt
 	  }
 	}`,

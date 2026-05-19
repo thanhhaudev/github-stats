@@ -7,7 +7,7 @@
    <!--END_SECTION:readme-stats-->
    ```
 3. Add secrets at **Settings → Secrets and variables → Actions**:
-   - `GH_TOKEN` — Personal access token (classic), scopes `repo` + `user`. ([create one](https://github.com/settings/tokens))
+   - `GH_TOKEN` — Personal access token (classic), scope `repo`. ([create one](https://github.com/settings/tokens))
    - `WAKATIME_API_KEY` — optional, only for WakaTime metrics. ([get key](https://wakatime.com/settings/api-key))
 4. Add `.github/workflows/update-stats.yml`:
    ```yaml
@@ -64,7 +64,7 @@ Set `SHOW_METRICS` to a comma-separated list. Output appears in the order you li
 
 | Variable           | Purpose                                                                                                                 |
 |--------------------|-------------------------------------------------------------------------------------------------------------------------|
-| `GITHUB_TOKEN`     | API access. Scopes `repo` + `user`.                                                                                     |
+| `GITHUB_TOKEN`     | API access. Scope `repo`.                                                                                               |
 | `SHOW_METRICS`     | Which metrics to render.                                                                                                |
 | `WAKATIME_API_KEY` | Required for any `WAKATIME_*` metric and for time fields in `CODING_STREAK`.                                            |
 | `WAKATIME_DATA`    | Required if `WAKATIME_SPENT_TIME` is in `SHOW_METRICS`. Any of `EDITORS`, `LANGUAGES`, `PROJECTS`, `OPERATING_SYSTEMS`. |
