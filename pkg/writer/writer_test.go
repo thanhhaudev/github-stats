@@ -24,6 +24,33 @@ func TestTruncateStringPreservesUTF8(t *testing.T) {
 	}
 }
 
+func TestFormatDataDescriptionStartsAtStatValueColumn(t *testing.T) {
+	line := strings.TrimPrefix(formatData(Data{
+		Name:        "🌅 Morning",
+		Description: "666 commits",
+		Percent:     26.13,
+	}, "1"), "\n")
+	beforeDescription, _, ok := strings.Cut(line, "666 commits")
+	if !ok {
+		t.Fatalf("formatted line missing description: %q", line)
+	}
+
+	statLine := formatStatLine("🔥 Current Streak:", "4 days")
+	beforeStatValue, _, ok := strings.Cut(statLine, "4 days")
+	if !ok {
+		t.Fatalf("stat line missing value: %q", statLine)
+	}
+
+	if displayWidth(beforeDescription) != displayWidth(beforeStatValue) {
+		t.Fatalf("description starts at display width %d, want stat value column %d\nformatData: %q\nstatLine:   %q",
+			displayWidth(beforeDescription),
+			displayWidth(beforeStatValue),
+			line,
+			statLine,
+		)
+	}
+}
+
 func TestFormatCountLine(t *testing.T) {
 	tests := []struct {
 		name     string
@@ -417,10 +444,10 @@ func TestMakeCommitTimesOfDayList(t *testing.T) {
 		"**🕒 I'm An Early Bird 🐤**",
 		"",
 		"```text",
-		"🌅 Morning" + strings.Repeat(" ", 15) + "2 commits" + strings.Repeat(" ", 11) + "██████████░░░░░░░░░░░░░░░   40.00%",
-		"🌞 Daytime" + strings.Repeat(" ", 15) + "1 commit" + strings.Repeat(" ", 12) + "█████░░░░░░░░░░░░░░░░░░░░   20.00%",
-		"🌆 Evening" + strings.Repeat(" ", 15) + "1 commit" + strings.Repeat(" ", 12) + "█████░░░░░░░░░░░░░░░░░░░░   20.00%",
-		"🌙 Night" + strings.Repeat(" ", 17) + "1 commit" + strings.Repeat(" ", 12) + "█████░░░░░░░░░░░░░░░░░░░░   20.00%",
+		"🌅 Morning" + strings.Repeat(" ", 16) + "2 commits" + strings.Repeat(" ", 11) + "██████████░░░░░░░░░░░░░░░   40.00%",
+		"🌞 Daytime" + strings.Repeat(" ", 16) + "1 commit" + strings.Repeat(" ", 12) + "█████░░░░░░░░░░░░░░░░░░░░   20.00%",
+		"🌆 Evening" + strings.Repeat(" ", 16) + "1 commit" + strings.Repeat(" ", 12) + "█████░░░░░░░░░░░░░░░░░░░░   20.00%",
+		"🌙 Night" + strings.Repeat(" ", 18) + "1 commit" + strings.Repeat(" ", 12) + "█████░░░░░░░░░░░░░░░░░░░░   20.00%",
 		"```",
 		"",
 		"",

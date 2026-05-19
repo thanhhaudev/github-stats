@@ -13,9 +13,9 @@ import (
 )
 
 const (
-	nameLength        = 25
-	descriptionLength = 20
-	graphLength       = 25
+	labelColumnWidth       = 26
+	descriptionColumnWidth = 20
+	graphLength            = 25
 )
 
 type Data struct {
@@ -445,14 +445,14 @@ func makeProgressBarV2(p float64) string {
 func formatData(data Data, version string) string {
 	var b strings.Builder
 
-	n := truncateString(data.Name, nameLength)
-	d := truncateString(data.Description, descriptionLength)
+	n := truncateString(data.Name, labelColumnWidth)
+	d := truncateString(data.Description, descriptionColumnWidth)
 
 	b.WriteString("\n")
 	b.WriteString(n)
-	b.WriteString(strings.Repeat(" ", max(0, nameLength-displayWidth(n))))
+	b.WriteString(strings.Repeat(" ", max(0, labelColumnWidth-displayWidth(n))))
 	b.WriteString(d)
-	b.WriteString(strings.Repeat(" ", max(0, descriptionLength-displayWidth(d))))
+	b.WriteString(strings.Repeat(" ", max(0, descriptionColumnWidth-displayWidth(d))))
 
 	if version == "2" {
 		b.WriteString(makeProgressBarV2(data.Percent))
@@ -527,9 +527,8 @@ func makeStatBlock(title string, lines ...string) string {
 
 // formatStatLine formats a stat line with consistent padding between label and value.
 func formatStatLine(label, value string) string {
-	const labelWidth = 26
 	labelLen := displayWidth(label)
-	padding := labelWidth - labelLen
+	padding := labelColumnWidth - labelLen
 	if padding < 0 {
 		padding = 0
 	}

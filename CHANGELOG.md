@@ -6,6 +6,11 @@ All notable changes to this project will be documented in this file. Format foll
 
 ## [Unreleased]
 
+## [1.5.6] - 2026-05-19
+
+### Changed
+- Align fixed-width stats table labels with stat block labels so `COMMIT_TIMES_OF_DAY` and other table metrics share the same value column.
+
 ## [1.5.5] - 2026-05-18
 
 ### Added
@@ -47,7 +52,8 @@ All notable changes to this project will be documented in this file. Format foll
 ### Fixed
 - AI footprint row label: `Total Prompt Chars` (raw `ai_prompt_length`) replaces the misleading `Average Prompt` while WakaTime omits `ai_average_prompt_length` from `/stats`. Reverts to `Average Prompt` automatically once the field appears.
 
-[Unreleased]: https://github.com/thanhhaudev/github-stats/compare/v1.5.5...HEAD
+[Unreleased]: https://github.com/thanhhaudev/github-stats/compare/v1.5.6...HEAD
+[1.5.6]: https://github.com/thanhhaudev/github-stats/releases/tag/v1.5.6
 [1.5.5]: https://github.com/thanhhaudev/github-stats/releases/tag/v1.5.5
 [1.5.4]: https://github.com/thanhhaudev/github-stats/releases/tag/v1.5.4
 [1.5.3]: https://github.com/thanhhaudev/github-stats/releases/tag/v1.5.3
