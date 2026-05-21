@@ -408,17 +408,21 @@ func (d *DataContainer) InitWakaStats(ctx context.Context) error {
 		d.Logger.Println("Fetching WakaTime all-time statistics...")
 	}
 	allTimeStats, err := d.ClientManager.GetWakaTimeAllTimeSinceToday(ctx)
-	if err != nil {
-		if errors.Is(err, wakatime.ErrStatsNotReady) {
-			d.restoreCachedWakaTimeStats()
-			return nil
-		}
-
-		if !d.Config.SimpleLogs {
+	if err == nil {
+		d.Data.WakaTimeAllTime = allTimeStats
+	} else {
+		if !errors.Is(err, wakatime.ErrStatsNotReady) && !d.Config.SimpleLogs {
 			d.Logger.Println("An error occurred while fetching WakaTime all-time data:", err)
 		}
-	} else {
-		d.Data.WakaTimeAllTime = allTimeStats
+
+		// The main stats fetched above are fresh and valid; only the all-time
+		// endpoint is unavailable. Keep the fresh stats and reuse just the
+		// cached all-time snapshot rather than discarding everything.
+		if d.Cache != nil {
+			if _, cachedAllTime, ok := d.Cache.LookupWakaTime(d.Config.WakaTimeRange); ok && cachedAllTime != nil {
+				d.Data.WakaTimeAllTime = cachedAllTime
+			}
+		}
 	}
 
 	d.cacheWakaTimeStats()

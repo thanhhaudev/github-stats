@@ -21,6 +21,7 @@ type fakeDataClientManager struct {
 	commitRefs []string
 	wakaStats  *wakatime.Stats
 	allTime    *wakatime.AllTimeSinceTodayStats
+	allTimeErr error
 }
 
 func (f *fakeDataClientManager) HasGitHubClient() bool {
@@ -66,7 +67,7 @@ func (f *fakeDataClientManager) GetWakaTimeStats(ctx context.Context) (*wakatime
 }
 
 func (f *fakeDataClientManager) GetWakaTimeAllTimeSinceToday(ctx context.Context) (*wakatime.AllTimeSinceTodayStats, error) {
-	return f.allTime, nil
+	return f.allTime, f.allTimeErr
 }
 
 func TestDataContainerInitCommitsReturnsBranchError(t *testing.T) {
