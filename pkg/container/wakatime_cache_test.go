@@ -2,6 +2,7 @@ package container
 
 import (
 	"context"
+	"errors"
 	"io"
 	"log"
 	"testing"
@@ -121,6 +122,49 @@ func TestInitWakaStatsKeepsFreshStatsWhenAllTimePending(t *testing.T) {
 		t.Fatalf("expected fresh WakaTime stats kept, got %+v", d.Data.WakaTime)
 	}
 	// All-time was unavailable, so the cached all-time snapshot is reused.
+	if d.Data.WakaTimeAllTime == nil || d.Data.WakaTimeAllTime.Data.Text != "99 hrs" {
+		t.Fatalf("expected cached all-time reused, got %+v", d.Data.WakaTimeAllTime)
+	}
+}
+
+func TestInitWakaStatsKeepsFreshStatsWhenAllTimeErrors(t *testing.T) {
+	// Cached snapshot from an earlier run.
+	cachedStats := &wakatime.Stats{}
+	cachedStats.Data.Range = "last_7_days"
+	cachedStats.Data.Languages = []wakatime.StatsItem{{Name: "Rust"}}
+	cachedAllTime := &wakatime.AllTimeSinceTodayStats{}
+	cachedAllTime.Data.Text = "99 hrs"
+
+	c := &cache.Cache{Repos: make(map[string]*cache.RepoEntry)}
+	c.SetWakaTime("last_7_days", cachedStats, cachedAllTime)
+
+	// This run: main stats fetch succeeds, all-time fetch fails with a
+	// generic (non-ErrStatsNotReady) error, with SimpleLogs disabled so the
+	// error-logging sub-branch is exercised.
+	freshStats := &wakatime.Stats{}
+	freshStats.Data.Status = "ok"
+	freshStats.Data.Range = "last_7_days"
+	freshStats.Data.Languages = []wakatime.StatsItem{{Name: "Go"}}
+
+	d := NewDataContainer(
+		log.New(io.Discard, "", 0),
+		&fakeDataClientManager{
+			wakaStats:  freshStats,
+			allTimeErr: errors.New("network timeout"),
+		},
+		&config.Config{WakaTimeRange: "last_7_days", SimpleLogs: false},
+	)
+	d.Cache = c
+
+	if err := d.InitWakaStats(context.Background()); err != nil {
+		t.Fatalf("InitWakaStats returned error: %v", err)
+	}
+	// A generic all-time error must not propagate and must not discard the
+	// fresh main stats.
+	if d.Data.WakaTime == nil || d.Data.WakaTime.Data.Languages[0].Name != "Go" {
+		t.Fatalf("expected fresh WakaTime stats kept, got %+v", d.Data.WakaTime)
+	}
+	// The cached all-time snapshot is reused after a generic all-time error.
 	if d.Data.WakaTimeAllTime == nil || d.Data.WakaTimeAllTime.Data.Text != "99 hrs" {
 		t.Fatalf("expected cached all-time reused, got %+v", d.Data.WakaTimeAllTime)
 	}
