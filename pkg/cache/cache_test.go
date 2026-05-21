@@ -385,6 +385,16 @@ func TestLoad_LegacyWakaTimeEntryGrandfathered(t *testing.T) {
 	if _, _, ok := c.LookupWakaTime("last_7_days"); !ok {
 		t.Error("expected a legacy versionless WakaTime entry to be adopted")
 	}
+
+	// The grandfathered entry must keep surviving once its version has been
+	// normalized and persisted by a Save.
+	if err := c.Save(path); err != nil {
+		t.Fatal(err)
+	}
+	reloaded := Load(path, false)
+	if _, _, ok := reloaded.LookupWakaTime("last_7_days"); !ok {
+		t.Error("expected legacy entry to survive a save/reload cycle after grandfathering")
+	}
 }
 
 func TestLoad_WakaTimeDroppedOnSchemaMismatch(t *testing.T) {
