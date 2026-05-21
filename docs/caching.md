@@ -35,10 +35,10 @@ jobs:
 
 - The action stores fetched repo metadata + commits in `CACHE_FILE` (`.github-stats-cache.json` by default).
 - Each run queries every repo's `pushedAt`. Unchanged repos reuse cached commits and skip the API calls.
-- When WakaTime is enabled, successful WakaTime stats are also cached. If a later WakaTime response is still processing (`202`, `pending_update`, or `is_up_to_date=false`), the action reuses the cached WakaTime stats and still updates GitHub-based metrics.
+- When WakaTime is enabled, successful WakaTime stats are also cached. If a later WakaTime response is still processing (`202`, `pending_update`, or `is_up_to_date=false`), the action reuses the cached WakaTime stats and still updates GitHub-based metrics. If only the all-time endpoint is processing, the freshly fetched stats are kept and just the all-time figure falls back to cache.
 - Cached repos that no longer exist (deleted, transferred) are pruned automatically.
-- The cache schema is versioned. Schema upgrades invalidate the cache.
-- Toggling `ONLY_MAIN_BRANCH` invalidates the cache (the two modes return different commit sets).
+- The repo-commit cache and the WakaTime snapshot are versioned independently. A repo-commit schema upgrade re-fetches commits but keeps the WakaTime snapshot; a WakaTime schema upgrade does the reverse.
+- Toggling `ONLY_MAIN_BRANCH` invalidates only the cached commits (the two modes return different commit sets); the WakaTime snapshot is unaffected.
 
 ## Trade-offs
 

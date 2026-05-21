@@ -6,6 +6,10 @@ All notable changes to this project will be documented in this file. Format foll
 
 ## [Unreleased]
 
+### Fixed
+- Version the cached WakaTime snapshot independently of the repo-commit cache, so a commit-cache schema upgrade or an `ONLY_MAIN_BRANCH` toggle no longer discards a still-valid WakaTime snapshot.
+- Keep freshly fetched WakaTime stats when only the all-time endpoint is still processing, instead of discarding them and falling back entirely to the cached snapshot.
+
 ## [1.5.6] - 2026-05-19
 
 ### Changed
