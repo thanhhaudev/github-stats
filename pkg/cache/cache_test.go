@@ -26,15 +26,15 @@ func TestLoad_MissingFileReturnsEmpty(t *testing.T) {
 	if len(c.Repos) != 0 {
 		t.Errorf("expected empty repos, got %d", len(c.Repos))
 	}
-	if c.Version != SchemaVersion {
-		t.Errorf("expected version %d, got %d", SchemaVersion, c.Version)
+	if c.Version != RepoSchemaVersion {
+		t.Errorf("expected version %d, got %d", RepoSchemaVersion, c.Version)
 	}
 }
 
 func TestLoad_VersionMismatchReturnsEmpty(t *testing.T) {
 	path := tempCachePath(t)
 	stale := map[string]any{
-		"version":        SchemaVersion - 1,
+		"version":        RepoSchemaVersion - 1,
 		"onlyMainBranch": false,
 		"repos":          map[string]any{"u1": map[string]any{}},
 	}
@@ -53,7 +53,7 @@ func TestLoad_OnlyMainBranchMismatchReturnsEmpty(t *testing.T) {
 	path := tempCachePath(t)
 	pushed := time.Now()
 	c := &Cache{
-		Version:        SchemaVersion,
+		Version:        RepoSchemaVersion,
 		OnlyMainBranch: true,
 		Repos: map[string]*RepoEntry{
 			"u1": {PushedAt: pushed, Commits: []github.Commit{{OID: "abc"}}},
@@ -86,7 +86,7 @@ func TestSaveLoadRoundTrip(t *testing.T) {
 	pushed := time.Date(2026, 4, 1, 12, 0, 0, 0, time.UTC)
 
 	original := &Cache{
-		Version:        SchemaVersion,
+		Version:        RepoSchemaVersion,
 		OnlyMainBranch: false,
 		Repos: map[string]*RepoEntry{
 			"https://github.com/alice/demo": {
@@ -124,7 +124,7 @@ func TestSaveLoadRoundTrip_WakaTime(t *testing.T) {
 	allTime.Data.Text = "10 hrs"
 
 	original := &Cache{
-		Version:        SchemaVersion,
+		Version:        RepoSchemaVersion,
 		OnlyMainBranch: false,
 		Repos:          make(map[string]*RepoEntry),
 	}
@@ -164,7 +164,7 @@ func TestSaveLoadRoundTrip_DoesNotLeakRepoMetadata(t *testing.T) {
 	// cache file does not expose private repo metadata.
 	path := tempCachePath(t)
 	c := &Cache{
-		Version: SchemaVersion,
+		Version: RepoSchemaVersion,
 		Repos: map[string]*RepoEntry{
 			"https://github.com/alice/secret": {
 				PushedAt: time.Now(),
@@ -316,4 +316,96 @@ func TestSave_RaceWithSet(t *testing.T) {
 		}
 	}
 	close(stop)
+}
+
+func TestLoad_WakaTimeSurvivesRepoSchemaMismatch(t *testing.T) {
+	path := tempCachePath(t)
+	raw := map[string]any{
+		"version":        RepoSchemaVersion - 1, // stale repo-commit schema
+		"onlyMainBranch": false,
+		"repos":          map[string]any{"u1": map[string]any{}},
+		"wakaTime": map[string]any{
+			"version": WakaTimeSchemaVersion,
+			"range":   "last_7_days",
+			"stats":   map[string]any{"data": map[string]any{"range": "last_7_days"}},
+		},
+	}
+	data, _ := json.Marshal(raw)
+	if err := os.WriteFile(path, data, 0644); err != nil {
+		t.Fatal(err)
+	}
+
+	c := Load(path, false)
+	if len(c.Repos) != 0 {
+		t.Errorf("expected repos dropped on schema mismatch, got %d", len(c.Repos))
+	}
+	if _, _, ok := c.LookupWakaTime("last_7_days"); !ok {
+		t.Error("expected WakaTime snapshot to survive a repo-schema mismatch")
+	}
+}
+
+func TestLoad_WakaTimeSurvivesOnlyMainBranchMismatch(t *testing.T) {
+	path := tempCachePath(t)
+	stats := &wakatime.Stats{}
+	stats.Data.Range = "last_7_days"
+
+	original := &Cache{
+		Version:        RepoSchemaVersion,
+		OnlyMainBranch: true,
+		Repos:          make(map[string]*RepoEntry),
+	}
+	original.SetWakaTime("last_7_days", stats, nil)
+	if err := original.Save(path); err != nil {
+		t.Fatal(err)
+	}
+
+	c := Load(path, false) // toggled onlyMainBranch
+	if _, _, ok := c.LookupWakaTime("last_7_days"); !ok {
+		t.Error("expected WakaTime snapshot to survive an onlyMainBranch toggle")
+	}
+}
+
+func TestLoad_LegacyWakaTimeEntryGrandfathered(t *testing.T) {
+	path := tempCachePath(t)
+	raw := map[string]any{
+		"version":        RepoSchemaVersion,
+		"onlyMainBranch": false,
+		"repos":          map[string]any{},
+		"wakaTime": map[string]any{ // no "version" field — written before this change
+			"range": "last_7_days",
+			"stats": map[string]any{"data": map[string]any{"range": "last_7_days"}},
+		},
+	}
+	data, _ := json.Marshal(raw)
+	if err := os.WriteFile(path, data, 0644); err != nil {
+		t.Fatal(err)
+	}
+
+	c := Load(path, false)
+	if _, _, ok := c.LookupWakaTime("last_7_days"); !ok {
+		t.Error("expected a legacy versionless WakaTime entry to be adopted")
+	}
+}
+
+func TestLoad_WakaTimeDroppedOnSchemaMismatch(t *testing.T) {
+	path := tempCachePath(t)
+	raw := map[string]any{
+		"version":        RepoSchemaVersion,
+		"onlyMainBranch": false,
+		"repos":          map[string]any{},
+		"wakaTime": map[string]any{
+			"version": WakaTimeSchemaVersion + 1, // future, incompatible schema
+			"range":   "last_7_days",
+			"stats":   map[string]any{"data": map[string]any{"range": "last_7_days"}},
+		},
+	}
+	data, _ := json.Marshal(raw)
+	if err := os.WriteFile(path, data, 0644); err != nil {
+		t.Fatal(err)
+	}
+
+	c := Load(path, false)
+	if _, _, ok := c.LookupWakaTime("last_7_days"); ok {
+		t.Error("expected WakaTime snapshot dropped on a schema-version mismatch")
+	}
 }

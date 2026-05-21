@@ -9,8 +9,6 @@ package cache
 
 import (
 	"encoding/json"
-	"errors"
-	"io/fs"
 	"os"
 	"sync"
 	"time"
@@ -19,9 +17,18 @@ import (
 	"github.com/thanhhaudev/github-stats/pkg/wakatime"
 )
 
-// SchemaVersion bumps whenever the on-disk format changes incompatibly.
-// A mismatch causes Load to return a fresh empty cache (one slow run after upgrade).
-const SchemaVersion = 2
+// RepoSchemaVersion bumps whenever the repo-commit on-disk format changes
+// incompatibly. A mismatch drops the cached repos (one slow run after the
+// upgrade) but leaves the WakaTime snapshot intact.
+const RepoSchemaVersion = 2
+
+// WakaTimeSchemaVersion bumps whenever the WakaTime snapshot on-disk format
+// changes incompatibly. It is independent of RepoSchemaVersion so a repo-commit
+// format change never discards a still-valid WakaTime snapshot.
+//
+// Load maps legacy versionless entries to version 1; raising this constant
+// past 1 therefore correctly invalidates them.
+const WakaTimeSchemaVersion = 1
 
 // RepoEntry holds the minimum data needed to decide cache hit/miss and replay
 // a fetch result. We deliberately do NOT store the full Repository struct —
@@ -33,6 +40,7 @@ type RepoEntry struct {
 }
 
 type WakaTimeEntry struct {
+	Version  int                              `json:"version"`
 	CachedAt time.Time                        `json:"cachedAt"`
 	Range    string                           `json:"range"`
 	Stats    *wakatime.Stats                  `json:"stats"`
@@ -49,12 +57,13 @@ type Cache struct {
 	mu sync.Mutex
 }
 
-// Load reads cache from path. Returns an empty cache (not nil) when the file
-// is missing, malformed, version-mismatched, or built under a different
-// onlyMainBranch flag — in those cases callers proceed with a full fetch.
+// Load reads cache from path. The repo-commit section and the WakaTime section
+// are validated independently: a repo-schema or onlyMainBranch mismatch drops
+// only the cached repos, while a WakaTime-schema mismatch drops only the
+// WakaTime snapshot. A missing or malformed file yields an empty cache.
 func Load(path string, onlyMainBranch bool) *Cache {
-	empty := &Cache{
-		Version:        SchemaVersion,
+	fresh := &Cache{
+		Version:        RepoSchemaVersion,
 		OnlyMainBranch: onlyMainBranch,
 		Repos:          make(map[string]*RepoEntry),
 	}
@@ -62,24 +71,37 @@ func Load(path string, onlyMainBranch bool) *Cache {
 	data, err := os.ReadFile(path)
 	if err != nil {
 		// missing file is the expected first-run case, not an error
-		if errors.Is(err, fs.ErrNotExist) {
-			return empty
-		}
-		return empty
+		return fresh
 	}
 
 	var c Cache
 	if err := json.Unmarshal(data, &c); err != nil {
-		return empty
+		return fresh
 	}
 
-	if c.Version != SchemaVersion || c.OnlyMainBranch != onlyMainBranch {
-		return empty
-	}
-
-	if c.Repos == nil {
+	// Repo-commit section: usable only when its schema and branch mode match.
+	if c.Version != RepoSchemaVersion || c.OnlyMainBranch != onlyMainBranch || c.Repos == nil {
 		c.Repos = make(map[string]*RepoEntry)
 	}
+
+	// WakaTime section: validated on its own version, independent of the repo
+	// schema and branch mode. Entries written before WakaTime carried a version
+	// field share the v1 on-disk shape, so a missing version is treated as 1.
+	if c.WakaTime != nil {
+		entryVersion := c.WakaTime.Version
+		if entryVersion == 0 {
+			entryVersion = 1
+		}
+		if entryVersion == WakaTimeSchemaVersion {
+			c.WakaTime.Version = WakaTimeSchemaVersion // normalize for the next Save
+		} else {
+			c.WakaTime = nil
+		}
+	}
+
+	// Normalize identity fields so the next Save writes the current schema.
+	c.Version = RepoSchemaVersion
+	c.OnlyMainBranch = onlyMainBranch
 
 	return &c
 }
@@ -90,7 +112,7 @@ func Load(path string, onlyMainBranch bool) *Cache {
 func (c *Cache) Save(path string) error {
 	c.mu.Lock()
 	c.CachedAt = time.Now().UTC()
-	c.Version = SchemaVersion
+	c.Version = RepoSchemaVersion
 	data, err := json.MarshalIndent(c, "", "  ")
 	c.mu.Unlock()
 	if err != nil {
@@ -152,6 +174,7 @@ func (c *Cache) SetWakaTime(statsRange string, stats *wakatime.Stats, allTime *w
 	defer c.mu.Unlock()
 
 	c.WakaTime = &WakaTimeEntry{
+		Version:  WakaTimeSchemaVersion,
 		CachedAt: time.Now().UTC(),
 		Range:    statsRange,
 		Stats:    stats,
