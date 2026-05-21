@@ -89,11 +89,15 @@ func Load(path string, onlyMainBranch bool) *Cache {
 	// field share the v1 on-disk shape, so a missing version is treated as 1.
 	if c.WakaTime != nil {
 		entryVersion := c.WakaTime.Version
+		// version == 0 means the entry predates WakaTimeSchemaVersion; those
+		// entries share the v1 on-disk layout, so treat them as v1. Bumping
+		// WakaTimeSchemaVersion past 1 therefore correctly invalidates them.
 		if entryVersion == 0 {
 			entryVersion = 1
 		}
 		if entryVersion == WakaTimeSchemaVersion {
-			c.WakaTime.Version = WakaTimeSchemaVersion // normalize for the next Save
+			// Stamp the canonical version so the next Save persists it.
+			c.WakaTime.Version = WakaTimeSchemaVersion
 		} else {
 			c.WakaTime = nil
 		}
