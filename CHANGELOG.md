@@ -6,6 +6,8 @@ All notable changes to this project will be documented in this file. Format foll
 
 ## [Unreleased]
 
+## [1.5.7] - 2026-05-21
+
 ### Fixed
 - Version the cached WakaTime snapshot independently of the repo-commit cache, so a commit-cache schema upgrade or an `ONLY_MAIN_BRANCH` toggle no longer discards a still-valid WakaTime snapshot.
 - Keep freshly fetched WakaTime stats when only the all-time endpoint is still processing, instead of discarding them and falling back entirely to the cached snapshot.
@@ -56,7 +58,8 @@ All notable changes to this project will be documented in this file. Format foll
 ### Fixed
 - AI footprint row label: `Total Prompt Chars` (raw `ai_prompt_length`) replaces the misleading `Average Prompt` while WakaTime omits `ai_average_prompt_length` from `/stats`. Reverts to `Average Prompt` automatically once the field appears.
 
-[Unreleased]: https://github.com/thanhhaudev/github-stats/compare/v1.5.6...HEAD
+[Unreleased]: https://github.com/thanhhaudev/github-stats/compare/v1.5.7...HEAD
+[1.5.7]: https://github.com/thanhhaudev/github-stats/releases/tag/v1.5.7
 [1.5.6]: https://github.com/thanhhaudev/github-stats/releases/tag/v1.5.6
 [1.5.5]: https://github.com/thanhhaudev/github-stats/releases/tag/v1.5.5
 [1.5.4]: https://github.com/thanhhaudev/github-stats/releases/tag/v1.5.4
