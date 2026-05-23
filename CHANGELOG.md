@@ -6,6 +6,8 @@ All notable changes to this project will be documented in this file. Format foll
 
 ## [Unreleased]
 
+## [1.5.8] - 2026-05-23
+
 ### Added
 - `STRIP_EMOJI` env var to suppress emoji from the rendered README block. Values: `NONE` (default, current output), `TITLE` (strip bold-section titles), `CONTENT` (strip stat-line labels inside code fences), `ALL` (strip everywhere including the `Last updated on …` line). Progress-bar glyphs in `PROGRESS_BAR_VERSION=2` are intentionally preserved.
 
@@ -61,7 +63,8 @@ All notable changes to this project will be documented in this file. Format foll
 ### Fixed
 - AI footprint row label: `Total Prompt Chars` (raw `ai_prompt_length`) replaces the misleading `Average Prompt` while WakaTime omits `ai_average_prompt_length` from `/stats`. Reverts to `Average Prompt` automatically once the field appears.
 
-[Unreleased]: https://github.com/thanhhaudev/github-stats/compare/v1.5.7...HEAD
+[Unreleased]: https://github.com/thanhhaudev/github-stats/compare/v1.5.8...HEAD
+[1.5.8]: https://github.com/thanhhaudev/github-stats/releases/tag/v1.5.8
 [1.5.7]: https://github.com/thanhhaudev/github-stats/releases/tag/v1.5.7
 [1.5.6]: https://github.com/thanhhaudev/github-stats/releases/tag/v1.5.6
 [1.5.5]: https://github.com/thanhhaudev/github-stats/releases/tag/v1.5.5
