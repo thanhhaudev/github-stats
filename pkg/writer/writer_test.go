@@ -6,6 +6,7 @@ import (
 	"time"
 	"unicode/utf8"
 
+	"github.com/thanhhaudev/github-stats/pkg/config"
 	"github.com/thanhhaudev/github-stats/pkg/github"
 	"github.com/thanhhaudev/github-stats/pkg/wakatime"
 )
@@ -456,4 +457,71 @@ func TestMakeCommitTimesOfDayList(t *testing.T) {
 	if got != want {
 		t.Fatalf("unexpected output:\nwant:\n%s\n\ngot:\n%s", want, got)
 	}
+}
+
+func TestTitleStrip_AcrossMakers(t *testing.T) {
+	type assertion struct {
+		mode           string
+		mustContain    []string
+		mustNotContain []string
+	}
+
+	t.Run("MakeCodingStreakList", func(t *testing.T) {
+		cases := []assertion{
+			{config.StripEmojiNone, []string{"**📈 Coding Streak**"}, nil},
+			{config.StripEmojiTitle, []string{"**Coding Streak**"}, []string{"📈 Coding"}},
+			{config.StripEmojiContent, []string{"**📈 Coding Streak**"}, nil},
+			{config.StripEmojiAll, []string{"**Coding Streak**"}, []string{"📈 Coding"}},
+		}
+		for _, c := range cases {
+			t.Run(c.mode, func(t *testing.T) {
+				setStripModeForTest(t, c.mode)
+				got := MakeCodingStreakList(nil, 1, 2)
+				for _, s := range c.mustContain {
+					if !strings.Contains(got, s) {
+						t.Errorf("expected output to contain %q under mode %q; got:\n%s", s, c.mode, got)
+					}
+				}
+				for _, s := range c.mustNotContain {
+					if strings.Contains(got, s) {
+						t.Errorf("did not expect %q under mode %q; got:\n%s", s, c.mode, got)
+					}
+				}
+			})
+		}
+	})
+
+	t.Run("MakeLanguagePerRepoList", func(t *testing.T) {
+		// PrimaryLanguage is *struct{ Name string `json:"name"` } in the actual Repository type.
+		// Build the repo via a temporary variable to satisfy the exact anonymous-struct type.
+		var repo github.Repository
+		repo.Name = "y"
+		repo.PrimaryLanguage = &struct {
+			Name string `json:"name"`
+		}{Name: "Go"}
+		repos := []github.Repository{repo}
+		setStripModeForTest(t, config.StripEmojiTitle)
+		got := MakeLanguagePerRepoList(repos, "1")
+		if !strings.Contains(got, "**I Mostly Code in Go**") {
+			t.Errorf("expected stripped title; got:\n%s", got)
+		}
+		if strings.Contains(got, "🔥") {
+			t.Errorf("did not expect 🔥 in title-stripped output; got:\n%s", got)
+		}
+	})
+
+	t.Run("MakeCommitTimesOfDayList strips both leading and trailing emoji", func(t *testing.T) {
+		setStripModeForTest(t, config.StripEmojiTitle)
+		commits := []github.Commit{
+			{CommittedDate: time.Date(2026, 1, 1, 7, 0, 0, 0, time.UTC)},
+			{CommittedDate: time.Date(2026, 1, 1, 8, 0, 0, 0, time.UTC)},
+		}
+		got := MakeCommitTimesOfDayList(commits, false, "1")
+		if !strings.Contains(got, "**I'm An Early Bird**") {
+			t.Errorf("expected title with both emoji stripped; got:\n%s", got)
+		}
+		if strings.Contains(got, "🕒") || strings.Contains(got, "🐤") {
+			t.Errorf("title should not retain 🕒 or 🐤 under TITLE mode; got:\n%s", got)
+		}
+	})
 }

@@ -59,7 +59,7 @@ func MakeLanguageAndToolList(l map[string][2]interface{}, totalSize int) string 
 		fmt.Fprintf(&res, "![%s](https://img.shields.io/badge/%s-%05.2f%%25-%s?&logo=%s&labelColor=151b23)\n", k, k, float64(s)/float64(totalSize)*100, c[1:], k)
 	}
 
-	return "**💬 Languages & Tools**\n\n" + res.String() + "\n\n"
+	return boldTitle("💬 Languages & Tools") + "\n\n" + res.String() + "\n\n"
 }
 
 // MakeWakaActivityList returns a list of activities
@@ -84,7 +84,7 @@ func MakeWakaActivityList(s *wakatime.Stats, i []string, version string) string 
 
 	res = strings.TrimSuffix(res, "\n") // trim last newline
 
-	return fmt.Sprintf("**%s**\n\n", wakaRangeNames[s.Data.Range]) + "```text\n" + res + "```\n\n"
+	return boldTitle(wakaRangeNames[s.Data.Range]) + "\n\n" + "```text\n" + res + "```\n\n"
 }
 
 func buildWakaData(i []wakatime.StatsItem) []Data {
@@ -302,7 +302,7 @@ func MakeCommitTimesOfDayList(commits []github.Commit, simplifyTitle bool, versi
 		}
 	}
 
-	return fmt.Sprintf("**🕒 I'm %s**\n\n", status) + "```text" + makeList(data, version) + "```\n\n"
+	return boldTitle(fmt.Sprintf("🕒 I'm %s", status)) + "\n\n" + "```text" + makeList(data, version) + "```\n\n"
 }
 
 // MakeCommitDaysOfWeekList returns a list of commits made on each day of the week
@@ -346,7 +346,7 @@ func MakeCommitDaysOfWeekList(wd map[time.Weekday]int, total int, version string
 		})
 	}
 
-	return fmt.Sprintf("**📅 I'm Most Productive on %s**\n\n", topName) + "```text" + makeList(data, version) + "```\n\n"
+	return boldTitle(fmt.Sprintf("📅 I'm Most Productive on %s", topName)) + "\n\n" + "```text" + makeList(data, version) + "```\n\n"
 }
 
 // MakeLanguagePerRepoList returns a list of languages and the percentage of repositories that use them
@@ -396,7 +396,7 @@ func MakeLanguagePerRepoList(r []github.Repository, version string) string {
 		})
 	}
 
-	return fmt.Sprintf("**🔥 I Mostly Code in %s**\n\n", topName) + "```text" + makeList(data, version) + "```\n\n"
+	return boldTitle(fmt.Sprintf("🔥 I Mostly Code in %s", topName)) + "\n\n" + "```text" + makeList(data, version) + "```\n\n"
 }
 
 func makeList(d []Data, version string) string {
@@ -511,11 +511,18 @@ func addCommas(n int) string {
 	return strings.Join(result, "")
 }
 
+// boldTitle wraps s as a markdown bold title (`**s**`) and applies the
+// active title-strip policy. Every code path that emits a `**…**` title in
+// the README block should route through this helper so the strip policy
+// lives in exactly one place.
+func boldTitle(s string) string {
+	return "**" + applyTitleStrip(s) + "**"
+}
+
 func makeStatBlock(title string, lines ...string) string {
 	var b strings.Builder
-	b.WriteString("**")
-	b.WriteString(title)
-	b.WriteString("**\n\n")
+	b.WriteString(boldTitle(title))
+	b.WriteString("\n\n")
 	b.WriteString("```text\n")
 	for _, line := range lines {
 		b.WriteString(line)
