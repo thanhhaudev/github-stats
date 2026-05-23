@@ -459,6 +459,74 @@ func TestMakeCommitTimesOfDayList(t *testing.T) {
 	}
 }
 
+func TestContentStrip_PreservesAlignment(t *testing.T) {
+	setStripModeForTest(t, config.StripEmojiContent)
+	got := MakeCodingStreakList(nil, 4, 18)
+	if !strings.Contains(got, "Current Streak:") {
+		t.Fatalf("expected 'Current Streak:' label in content-stripped output; got:\n%s", got)
+	}
+	if strings.Contains(got, "🔥") || strings.Contains(got, "🏆") {
+		t.Fatalf("expected emoji to be stripped from content; got:\n%s", got)
+	}
+
+	// Alignment: every data line inside the code fence with a colon must
+	// have the colon at the same byte offset (label column width).
+	lines := strings.Split(got, "\n")
+	var dataLines []string
+	inFence := false
+	for _, l := range lines {
+		if strings.HasPrefix(l, "```text") {
+			inFence = true
+			continue
+		}
+		if strings.HasPrefix(l, "```") {
+			inFence = false
+			continue
+		}
+		if inFence && strings.Contains(l, ":") {
+			dataLines = append(dataLines, l)
+		}
+	}
+	if len(dataLines) < 2 {
+		t.Fatalf("not enough data lines to check alignment: %v", dataLines)
+	}
+	colon := strings.Index(dataLines[0], ":")
+	for _, dl := range dataLines {
+		if strings.Index(dl, ":") != colon {
+			t.Errorf("colon position differs from baseline:\nbase: %q (colon=%d)\nthis: %q (colon=%d)", dataLines[0], colon, dl, strings.Index(dl, ":"))
+		}
+	}
+}
+
+func TestContentStrip_WakaActivityLabels(t *testing.T) {
+	setStripModeForTest(t, config.StripEmojiContent)
+	stats := &wakatime.Stats{}
+	stats.Data.Range = "last_7_days"
+	stats.Data.Editors = []wakatime.StatsItem{{Name: "VS Code", Hours: 1, Minutes: 30, Text: "1h 30m", Percent: 100}}
+	got := MakeWakaActivityList(stats, []string{"EDITORS"}, "1")
+	if !strings.Contains(got, "Editors:") {
+		t.Errorf("expected 'Editors:' label; got:\n%s", got)
+	}
+	if strings.Contains(got, "📝") {
+		t.Errorf("did not expect 📝 in content-stripped output; got:\n%s", got)
+	}
+}
+
+func TestContentStrip_DataNameForTimesOfDay(t *testing.T) {
+	setStripModeForTest(t, config.StripEmojiContent)
+	commits := []github.Commit{
+		{CommittedDate: time.Date(2026, 1, 1, 7, 0, 0, 0, time.UTC)},
+		{CommittedDate: time.Date(2026, 1, 1, 13, 0, 0, 0, time.UTC)},
+	}
+	got := MakeCommitTimesOfDayList(commits, false, "1")
+	if strings.Contains(got, "🌅") || strings.Contains(got, "🌞") {
+		t.Errorf("did not expect time-of-day emoji under CONTENT; got:\n%s", got)
+	}
+	if !strings.Contains(got, "Morning") || !strings.Contains(got, "Daytime") {
+		t.Errorf("expected Morning/Daytime labels in stripped output; got:\n%s", got)
+	}
+}
+
 func TestTitleStrip_AcrossMakers(t *testing.T) {
 	type assertion struct {
 		mode           string

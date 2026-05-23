@@ -72,13 +72,13 @@ func MakeWakaActivityList(s *wakatime.Stats, i []string, version string) string 
 	for _, v := range i {
 		switch v {
 		case "LANGUAGES":
-			res = res + "💬 Languages:" + makeList(buildWakaData(s.Data.Languages), version) + "\n"
+			res = res + applyContentStrip("💬 Languages:") + makeList(buildWakaData(s.Data.Languages), version) + "\n"
 		case "EDITORS":
-			res = res + "📝 Editors:" + makeList(buildWakaData(s.Data.Editors), version) + "\n"
+			res = res + applyContentStrip("📝 Editors:") + makeList(buildWakaData(s.Data.Editors), version) + "\n"
 		case "OPERATING_SYSTEMS":
-			res = res + "💻 Operating Systems:" + makeList(buildWakaData(s.Data.OperatingSystems), version) + "\n"
+			res = res + applyContentStrip("💻 Operating Systems:") + makeList(buildWakaData(s.Data.OperatingSystems), version) + "\n"
 		case "PROJECTS":
-			res = res + "📦 Projects:" + makeList(buildWakaData(s.Data.Projects), version) + "\n"
+			res = res + applyContentStrip("📦 Projects:") + makeList(buildWakaData(s.Data.Projects), version) + "\n"
 		}
 	}
 
@@ -443,6 +443,8 @@ func makeProgressBarV2(p float64) string {
 }
 
 func formatData(data Data, version string) string {
+	data.Name = applyContentStrip(data.Name)
+
 	var b strings.Builder
 
 	n := truncateString(data.Name, labelColumnWidth)
@@ -534,6 +536,7 @@ func makeStatBlock(title string, lines ...string) string {
 
 // formatStatLine formats a stat line with consistent padding between label and value.
 func formatStatLine(label, value string) string {
+	label = applyContentStrip(label)
 	labelLen := displayWidth(label)
 	padding := labelColumnWidth - labelLen
 	if padding < 0 {
@@ -592,6 +595,7 @@ func formatCountLine(label string, value int64, singular, plural string) string 
 }
 
 func formatCountLineFormatted(label string, value int64, singular, plural string, format func(int64) string) string {
+	label = applyContentStrip(label)
 	unit := plural
 	if value == 1 {
 		unit = singular
