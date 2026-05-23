@@ -595,7 +595,6 @@ func formatCountLine(label string, value int64, singular, plural string) string 
 }
 
 func formatCountLineFormatted(label string, value int64, singular, plural string, format func(int64) string) string {
-	label = applyContentStrip(label)
 	unit := plural
 	if value == 1 {
 		unit = singular
