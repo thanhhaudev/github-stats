@@ -15,6 +15,7 @@ import (
 	"github.com/thanhhaudev/github-stats/pkg/container"
 	"github.com/thanhhaudev/github-stats/pkg/github"
 	"github.com/thanhhaudev/github-stats/pkg/wakatime"
+	"github.com/thanhhaudev/github-stats/pkg/writer"
 )
 
 func main() {
@@ -28,6 +29,8 @@ func main() {
 	if err := cfg.Validate(); err != nil {
 		logger.Fatalf("❌ Configuration error: %v", err)
 	}
+
+	writer.SetStripEmoji(cfg.StripEmoji)
 
 	cl, err := setClock(logger, cfg)
 	if err != nil {
