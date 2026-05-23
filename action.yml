@@ -74,6 +74,10 @@ inputs:
   CACHE_FILE:
     description: 'Cache file path (must match the actions/cache@v4 path input)'
     required: false
+  STRIP_EMOJI:
+    description: 'Strip emoji from the rendered README block. One of: NONE, TITLE, CONTENT, ALL.'
+    required: false
+    default: 'NONE'
 runs:
   using: docker
   image: Dockerfile
@@ -102,6 +106,7 @@ runs:
     SIMPLE_LOGS: ${{ inputs.SIMPLE_LOGS }}
     ENABLE_CACHE: ${{ inputs.ENABLE_CACHE }}
     CACHE_FILE: ${{ inputs.CACHE_FILE }}
+    STRIP_EMOJI: ${{ inputs.STRIP_EMOJI }}
 branding:
   icon: 'star'
   color: 'orange'

@@ -6,6 +6,9 @@ All notable changes to this project will be documented in this file. Format foll
 
 ## [Unreleased]
 
+### Added
+- `STRIP_EMOJI` env var to suppress emoji from rendered README titles, code-fence content, or both. Default `NONE` preserves current output.
+
 ## [1.5.7] - 2026-05-21
 
 ### Fixed

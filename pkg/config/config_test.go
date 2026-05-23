@@ -264,6 +264,7 @@ func TestPublicEnvKeysAreDocumentedAndExposedByAction(t *testing.T) {
 		"ONLY_MAIN_BRANCH",
 		"ENABLE_CACHE",
 		"CACHE_FILE",
+		"STRIP_EMOJI",
 	}
 
 	for _, key := range publicEnvKeys {
