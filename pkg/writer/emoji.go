@@ -94,7 +94,7 @@ func isEmojiRune(r rune) bool {
 		return true
 	case r >= 0x2300 && r <= 0x23FF: // Miscellaneous Technical (⏱, ⏳, ⌛, …)
 		return true
-	case r >= 0x2600 && r <= 0x26FF: // Miscellaneous Symbols (⭐, ☀, …)
+	case r >= 0x2600 && r <= 0x26FF: // Miscellaneous Symbols (☀, ♻, ♨, …)
 		return true
 	case r >= 0x2700 && r <= 0x27BF: // Dingbats (✅, ✨, …)
 		return true
