@@ -527,6 +527,26 @@ func TestContentStrip_DataNameForTimesOfDay(t *testing.T) {
 	}
 }
 
+func TestMakeLastUpdatedOn_StripModes(t *testing.T) {
+	cases := []struct {
+		mode string
+		want string
+	}{
+		{config.StripEmojiNone, "\n\n⏳ *Last updated on 2026-05-23 12:00*"},
+		{config.StripEmojiTitle, "\n\n⏳ *Last updated on 2026-05-23 12:00*"},
+		{config.StripEmojiContent, "\n\n⏳ *Last updated on 2026-05-23 12:00*"},
+		{config.StripEmojiAll, "\n\n*Last updated on 2026-05-23 12:00*"},
+	}
+	for _, c := range cases {
+		t.Run(c.mode, func(t *testing.T) {
+			setStripModeForTest(t, c.mode)
+			if got := MakeLastUpdatedOn("2026-05-23 12:00"); got != c.want {
+				t.Errorf("MakeLastUpdatedOn under mode %q = %q, want %q", c.mode, got, c.want)
+			}
+		})
+	}
+}
+
 func TestTitleStrip_AcrossMakers(t *testing.T) {
 	type assertion struct {
 		mode           string
