@@ -7,7 +7,7 @@ All notable changes to this project will be documented in this file. Format foll
 ## [Unreleased]
 
 ### Added
-- `STRIP_EMOJI` env var to suppress emoji from rendered README titles, code-fence content, or both. Default `NONE` preserves current output.
+- `STRIP_EMOJI` env var to suppress emoji from the rendered README block. Values: `NONE` (default, current output), `TITLE` (strip bold-section titles), `CONTENT` (strip stat-line labels inside code fences), `ALL` (strip everywhere including the `Last updated on …` line). Progress-bar glyphs in `PROGRESS_BAR_VERSION=2` are intentionally preserved.
 
 ## [1.5.7] - 2026-05-21
 
