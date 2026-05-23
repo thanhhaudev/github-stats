@@ -34,6 +34,14 @@ const (
 	ProgressBarVersion2 = "2"
 )
 
+// Valid STRIP_EMOJI modes
+const (
+	StripEmojiNone    = "NONE"
+	StripEmojiTitle   = "TITLE"
+	StripEmojiContent = "CONTENT"
+	StripEmojiAll     = "ALL"
+)
+
 // Boolean string values
 const (
 	TrueVal  = "true"
@@ -57,6 +65,7 @@ type Config struct {
 	TimeZone                 string
 	ProgressBarVersion       string
 	SimplifyCommitTimesTitle bool
+	StripEmoji               string
 
 	// Git settings
 	DryRun             bool
@@ -97,6 +106,7 @@ func Load() *Config {
 		TimeZone:                 os.Getenv("TIME_ZONE"),
 		ProgressBarVersion:       os.Getenv("PROGRESS_BAR_VERSION"),
 		SimplifyCommitTimesTitle: os.Getenv("SIMPLIFY_COMMIT_TIMES_TITLE") == TrueVal,
+		StripEmoji:               os.Getenv("STRIP_EMOJI"),
 
 		// Git settings
 		DryRun:             os.Getenv("DRY_RUN") == TrueVal,
@@ -222,6 +232,18 @@ func (c *Config) Validate() error {
 
 	if c.ProgressBarVersion != "" && c.ProgressBarVersion != ProgressBarVersion1 && c.ProgressBarVersion != ProgressBarVersion2 {
 		return fmt.Errorf("PROGRESS_BAR_VERSION must be '%s' or '%s'", ProgressBarVersion1, ProgressBarVersion2)
+	}
+
+	if c.StripEmoji != "" {
+		validStripEmoji := []string{
+			StripEmojiNone,
+			StripEmojiTitle,
+			StripEmojiContent,
+			StripEmojiAll,
+		}
+		if !contains(validStripEmoji, c.StripEmoji) {
+			return fmt.Errorf("STRIP_EMOJI must be one of: %s", strings.Join(validStripEmoji, ", "))
+		}
 	}
 
 	return nil

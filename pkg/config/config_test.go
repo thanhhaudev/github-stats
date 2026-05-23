@@ -152,6 +152,71 @@ func TestConfig_Validate(t *testing.T) {
 			},
 			wantErr: false,
 		},
+		{
+			name: "valid STRIP_EMOJI - empty",
+			config: &Config{
+				GitHubToken: "ghp_test123",
+				ShowMetrics: []string{"COMMIT_TIMES_OF_DAY"},
+				StripEmoji:  "",
+			},
+			wantErr: false,
+		},
+		{
+			name: "valid STRIP_EMOJI - NONE",
+			config: &Config{
+				GitHubToken: "ghp_test123",
+				ShowMetrics: []string{"COMMIT_TIMES_OF_DAY"},
+				StripEmoji:  "NONE",
+			},
+			wantErr: false,
+		},
+		{
+			name: "valid STRIP_EMOJI - TITLE",
+			config: &Config{
+				GitHubToken: "ghp_test123",
+				ShowMetrics: []string{"COMMIT_TIMES_OF_DAY"},
+				StripEmoji:  "TITLE",
+			},
+			wantErr: false,
+		},
+		{
+			name: "valid STRIP_EMOJI - CONTENT",
+			config: &Config{
+				GitHubToken: "ghp_test123",
+				ShowMetrics: []string{"COMMIT_TIMES_OF_DAY"},
+				StripEmoji:  "CONTENT",
+			},
+			wantErr: false,
+		},
+		{
+			name: "valid STRIP_EMOJI - ALL",
+			config: &Config{
+				GitHubToken: "ghp_test123",
+				ShowMetrics: []string{"COMMIT_TIMES_OF_DAY"},
+				StripEmoji:  "ALL",
+			},
+			wantErr: false,
+		},
+		{
+			name: "invalid STRIP_EMOJI - lowercase",
+			config: &Config{
+				GitHubToken: "ghp_test123",
+				ShowMetrics: []string{"COMMIT_TIMES_OF_DAY"},
+				StripEmoji:  "none",
+			},
+			wantErr: true,
+			errMsg:  "STRIP_EMOJI must be one of",
+		},
+		{
+			name: "invalid STRIP_EMOJI - garbage value",
+			config: &Config{
+				GitHubToken: "ghp_test123",
+				ShowMetrics: []string{"COMMIT_TIMES_OF_DAY"},
+				StripEmoji:  "BOTH",
+			},
+			wantErr: true,
+			errMsg:  "STRIP_EMOJI must be one of",
+		},
 	}
 
 	for _, tt := range tests {
