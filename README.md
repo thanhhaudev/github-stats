@@ -69,7 +69,7 @@ Set `SHOW_METRICS` to a comma-separated list. Output appears in the order you li
 | `WAKATIME_API_KEY` | Required for any `WAKATIME_*` metric and for time fields in `CODING_STREAK`.                                            |
 | `WAKATIME_DATA`    | Required if `WAKATIME_SPENT_TIME` is in `SHOW_METRICS`. Any of `EDITORS`, `LANGUAGES`, `PROJECTS`, `OPERATING_SYSTEMS`. |
 
-Full env var list (timezone, cache, commit author, progress-bar style, etc.): [docs/configuration.md](docs/configuration.md).
+Full env var list (timezone, cache, commit author, progress-bar style, emoji stripping, etc.): [docs/configuration.md](docs/configuration.md).
 
 ## More docs
 
