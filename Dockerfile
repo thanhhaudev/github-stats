@@ -9,7 +9,7 @@ COPY . .
 RUN CGO_ENABLED=0 GOOS=linux go build -o /build/github-stats ./cmd
 
 # Runtime stage
-FROM alpine:latest
+FROM alpine:3.21
 
 RUN apk add --no-cache git
 

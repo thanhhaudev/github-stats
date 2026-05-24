@@ -2,6 +2,7 @@ package main
 
 import (
 	"bytes"
+	"encoding/base64"
 	"errors"
 	"fmt"
 	"os"
@@ -11,8 +12,10 @@ import (
 	"strings"
 )
 
-// setupGitConfig sets up the git configuration
-func setupGitConfig(owner, token, name, email string, hideRepoInfo bool) error {
+// setupGitConfig sets up the git configuration. It does NOT embed the GitHub
+// token into the remote URL; the token is supplied per-push via
+// http.extraheader (see pushReadme) so it never persists in .git/config.
+func setupGitConfig(owner, name, email string, hideRepoInfo bool) error {
 	if name == "" {
 		name = "GitHub Action"
 	}
@@ -22,20 +25,20 @@ func setupGitConfig(owner, token, name, email string, hideRepoInfo bool) error {
 	}
 
 	if err := runGitCommand(hideRepoInfo, "config", "--global", "--add", "safe.directory", "/github/workspace"); err != nil {
-		return fmt.Errorf("git config safe.directory error: %v", sanitizeError(err, token, owner))
+		return fmt.Errorf("git config safe.directory error: %v", sanitizeError(err, "", owner))
 	}
 
 	if err := runGitCommand(hideRepoInfo, "config", "--global", "user.name", name); err != nil {
-		return fmt.Errorf("git config user.name error: %v", sanitizeError(err, token, owner))
+		return fmt.Errorf("git config user.name error: %v", sanitizeError(err, "", owner))
 	}
 
 	if err := runGitCommand(hideRepoInfo, "config", "--global", "user.email", email); err != nil {
-		return fmt.Errorf("git config user.email error: %v", sanitizeError(err, token, owner))
+		return fmt.Errorf("git config user.email error: %v", sanitizeError(err, "", owner))
 	}
 
-	remoteURL := fmt.Sprintf("https://%s@github.com/%s/%s.git", token, owner, owner)
+	remoteURL := fmt.Sprintf("https://github.com/%s/%s.git", owner, owner)
 	if err := runGitCommand(hideRepoInfo, "remote", "set-url", "origin", remoteURL); err != nil {
-		return fmt.Errorf("git remote set-url error: %v", sanitizeError(err, token, owner))
+		return fmt.Errorf("git remote set-url error: %v", sanitizeError(err, "", owner))
 	}
 
 	return nil
@@ -52,8 +55,10 @@ func hasReadmeChanged() (bool, error) {
 	return strings.TrimSpace(string(output)) != "", nil
 }
 
-// commitAndPushReadme Commit and push changes if README.md has changed
-func commitAndPushReadme(msg, branch string, hideRepoInfo bool) error {
+// commitAndPushReadme Commit and push changes if README.md has changed.
+// The token is supplied to the push via GIT_CONFIG_* env vars and never
+// appears on the command line or in .git/config.
+func commitAndPushReadme(token, msg, branch string, hideRepoInfo bool) error {
 	if branch == "" {
 		branch = "main"
 	}
@@ -70,20 +75,56 @@ func commitAndPushReadme(msg, branch string, hideRepoInfo bool) error {
 		return err
 	}
 
-	return runGitCommand(hideRepoInfo, "push", "origin", branch)
+	return pushReadme(hideRepoInfo, token, branch)
+}
+
+// pushReadme performs `git push origin -- <branch>` while injecting an
+// Authorization header via GIT_CONFIG_COUNT/KEY_0/VALUE_0 env vars. This
+// matches the credential strategy used by actions/checkout and avoids
+// writing the token into either argv or persisted git config.
+func pushReadme(hideRepoInfo bool, token, branch string) error {
+	authHeader := "Authorization: Basic " + base64.StdEncoding.EncodeToString([]byte("x-access-token:"+token))
+	extraEnv := []string{
+		"GIT_CONFIG_COUNT=1",
+		"GIT_CONFIG_KEY_0=http.https://github.com/.extraheader",
+		"GIT_CONFIG_VALUE_0=" + authHeader,
+	}
+	return runGitCommandEnv(hideRepoInfo, extraEnv, []string{authHeader, token}, "push", "origin", "--", branch)
 }
 
 func runGitCommand(hideRepoInfo bool, args ...string) error {
+	return runGitCommandEnv(hideRepoInfo, nil, nil, args...)
+}
+
+// runGitCommandEnv runs git with optional extra env vars and a list of
+// secret strings to redact from any output or error message before it
+// reaches the user. Callers pass redactions whenever args/env carry
+// credentials so a malformed git error cannot leak them.
+func runGitCommandEnv(hideRepoInfo bool, extraEnv, redactions []string, args ...string) error {
 	cmd := exec.Command("git", args...)
+	if len(extraEnv) > 0 {
+		cmd.Env = append(os.Environ(), extraEnv...)
+	}
+
 	var stdout, stderr bytes.Buffer
 	cmd.Stdout = &stdout
 	cmd.Stderr = &stderr
+
+	redact := func(s string) string {
+		for _, r := range redactions {
+			if r == "" {
+				continue
+			}
+			s = strings.ReplaceAll(s, r, "[***]")
+		}
+		return s
+	}
 
 	if hideRepoInfo {
 		// Suppress output when HIDE_REPO_INFO is true to prevent leaking sensitive information
 		if err := cmd.Run(); err != nil {
 			// Sanitize error output before returning
-			sanitizedErr := err.Error()
+			sanitizedErr := redact(err.Error())
 			if stdout.Len() > 0 {
 				sanitizedErr = strings.ReplaceAll(sanitizedErr, stdout.String(), "[output hidden]")
 			}
@@ -96,14 +137,14 @@ func runGitCommand(hideRepoInfo bool, args ...string) error {
 		}
 	} else {
 		if err := cmd.Run(); err != nil {
-			writeSanitizedGitOutput(os.Stdout, stdout.String())
-			writeSanitizedGitOutput(os.Stderr, stderr.String())
+			writeSanitizedGitOutput(os.Stdout, redact(stdout.String()))
+			writeSanitizedGitOutput(os.Stderr, redact(stderr.String()))
 
-			return fmt.Errorf("failed to run 'git %v': %v", args, sanitizeError(err, "", ""))
+			return fmt.Errorf("failed to run 'git %v': %v", args, sanitizeError(errors.New(redact(err.Error())), "", ""))
 		}
 
-		writeSanitizedGitOutput(os.Stdout, stdout.String())
-		writeSanitizedGitOutput(os.Stderr, stderr.String())
+		writeSanitizedGitOutput(os.Stdout, redact(stdout.String()))
+		writeSanitizedGitOutput(os.Stderr, redact(stderr.String()))
 	}
 
 	return nil

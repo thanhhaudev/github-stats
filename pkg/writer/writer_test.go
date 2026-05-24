@@ -498,6 +498,38 @@ func TestContentStrip_PreservesAlignment(t *testing.T) {
 	}
 }
 
+// TestFormatData_StripsBackticks verifies that a hostile API-supplied Name
+// or Description cannot break out of the surrounding ```text fenced block.
+func TestFormatData_StripsBackticks(t *testing.T) {
+	got := formatData(Data{
+		Name:        "evil```name",
+		Description: "1`h 2m",
+		Percent:     50,
+	}, "1")
+
+	if strings.Contains(got, "`") {
+		t.Errorf("formatData output must not contain backticks; got:\n%s", got)
+	}
+}
+
+// TestMakeWakaActivityList_StripsBackticks ensures backticks in WakaTime
+// project/editor/language names cannot inject markdown into the rendered
+// fenced block.
+func TestMakeWakaActivityList_StripsBackticks(t *testing.T) {
+	stats := &wakatime.Stats{}
+	stats.Data.Range = "last_7_days"
+	stats.Data.Editors = []wakatime.StatsItem{
+		{Name: "VS```Code", Hours: 1, Minutes: 30, Text: "1h 30m", Percent: 100},
+	}
+	got := MakeWakaActivityList(stats, []string{"EDITORS"}, "1")
+
+	// The only backticks allowed are the surrounding ```text fence pair.
+	tickCount := strings.Count(got, "`")
+	if tickCount != 6 {
+		t.Errorf("expected exactly 6 backticks (one fence open + one close); got %d in:\n%s", tickCount, got)
+	}
+}
+
 func TestContentStrip_WakaActivityLabels(t *testing.T) {
 	setStripModeForTest(t, config.StripEmojiContent)
 	stats := &wakatime.Stats{}

@@ -6,6 +6,12 @@ All notable changes to this project will be documented in this file. Format foll
 
 ## [Unreleased]
 
+### Security
+- Stop persisting `GITHUB_TOKEN` in `.git/config`. The `origin` URL is now set without credentials; auth is supplied per-push via `http.extraheader` injected through `GIT_CONFIG_COUNT/KEY_0/VALUE_0` env vars (same pattern as `actions/checkout`).
+- Pin `Dockerfile` runtime base to `alpine:3.21` instead of the mutable `alpine:latest`.
+- Pass `BRANCH_NAME` after a `--` separator to `git push` so a value starting with `-` cannot be reinterpreted as a flag.
+- Strip backticks from WakaTime project/editor/language names before rendering inside the surrounding `text` code fence to prevent markdown-fence injection from upstream API data.
+
 ## [1.5.8] - 2026-05-23
 
 ### Added

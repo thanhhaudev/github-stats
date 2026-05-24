@@ -442,8 +442,16 @@ func makeProgressBarV2(p float64) string {
 	return strings.Repeat(filledChar, filledLength) + strings.Repeat(halfFilledChar, halfFilledLength) + strings.Repeat(emptyChar, emptyLength)
 }
 
+func stripFenceChars(s string) string {
+	return strings.ReplaceAll(s, "`", "'")
+}
+
 func formatData(data Data, version string) string {
-	data.Name = applyContentStrip(data.Name)
+	// stripFenceChars defends against API-supplied strings (e.g. WakaTime
+	// project/editor/language names) that contain backticks and would
+	// otherwise break out of the surrounding ```text fenced block.
+	data.Name = stripFenceChars(applyContentStrip(data.Name))
+	data.Description = stripFenceChars(data.Description)
 
 	var b strings.Builder
 

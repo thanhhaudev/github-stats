@@ -65,7 +65,6 @@ func main() {
 			logger.Println("🔧 Setting up git config...")
 			return setupGitConfig(
 				dc.Data.Viewer.Login,
-				cfg.GitHubToken,
 				cfg.CommitUserName,
 				cfg.CommitUserEmail,
 				cfg.HideRepoInfo,
@@ -89,7 +88,7 @@ func main() {
 
 			if changed {
 				logger.Println("📤 Committing and pushing changes...")
-				return commitAndPushReadme(cfg.CommitMessage, cfg.BranchName, cfg.HideRepoInfo)
+				return commitAndPushReadme(cfg.GitHubToken, cfg.CommitMessage, cfg.BranchName, cfg.HideRepoInfo)
 			}
 
 			logger.Println("📤 No changes to commit, skipping...")
