@@ -6,6 +6,12 @@ All notable changes to this project will be documented in this file. Format foll
 
 ## [Unreleased]
 
+## [1.5.9] - 2026-05-28
+
+### Fixed
+- Push regression from the hardened-auth change in this release. `actions/checkout` (default `persist-credentials: true`) leaves an `http.https://github.com/.extraheader` entry in the workspace `.git/config`. Git treats `extraheader` as multi-valued, so the new entry injected via `GIT_CONFIG_VALUE_0` was sent **in addition to** the existing one. GitHub then rejected the push with HTTP 400 `Duplicate header: "Authorization"` before validating either token — even when both tokens were identical. `pushReadme` now runs `git config --local --unset-all http.https://github.com/.extraheader` before injecting its own, tolerating exit 5 when no prior entry exists.
+- `HIDE_REPO_INFO=true` no longer collapses every git failure to a bare `exit status N`. The suppressed branch of `runGitCommandEnv` was capturing stdout/stderr into buffers and then discarding them. Sanitized stdout/stderr (still scrubbed of token, owner, URLs, and github-token patterns) are now included in the returned error so push failures are debuggable.
+
 ### Security
 - Stop persisting `GITHUB_TOKEN` in `.git/config`. The `origin` URL is now set without credentials; auth is supplied per-push via `http.extraheader` injected through `GIT_CONFIG_COUNT/KEY_0/VALUE_0` env vars (same pattern as `actions/checkout`).
 - Pin `Dockerfile` runtime base to `alpine:3.21` instead of the mutable `alpine:latest`.
@@ -69,7 +75,8 @@ All notable changes to this project will be documented in this file. Format foll
 ### Fixed
 - AI footprint row label: `Total Prompt Chars` (raw `ai_prompt_length`) replaces the misleading `Average Prompt` while WakaTime omits `ai_average_prompt_length` from `/stats`. Reverts to `Average Prompt` automatically once the field appears.
 
-[Unreleased]: https://github.com/thanhhaudev/github-stats/compare/v1.5.8...HEAD
+[Unreleased]: https://github.com/thanhhaudev/github-stats/compare/v1.5.9...HEAD
+[1.5.9]: https://github.com/thanhhaudev/github-stats/releases/tag/v1.5.9
 [1.5.8]: https://github.com/thanhhaudev/github-stats/releases/tag/v1.5.8
 [1.5.7]: https://github.com/thanhhaudev/github-stats/releases/tag/v1.5.7
 [1.5.6]: https://github.com/thanhhaudev/github-stats/releases/tag/v1.5.6
