@@ -83,6 +83,16 @@ func commitAndPushReadme(token, msg, branch string, hideRepoInfo bool) error {
 // matches the credential strategy used by actions/checkout and avoids
 // writing the token into either argv or persisted git config.
 func pushReadme(hideRepoInfo bool, token, branch string) error {
+	// actions/checkout (default persist-credentials: true) writes its own
+	// http.https://github.com/.extraheader into the workspace .git/config.
+	// Git treats extraheader as multi-valued, so leaving it in place would
+	// make git send two Authorization headers — GitHub rejects that with
+	// "Duplicate header: Authorization" (HTTP 400) before validating either
+	// token. Strip the persistent entry so only our per-push header is sent.
+	if err := clearWorkspaceExtraheader(); err != nil {
+		return err
+	}
+
 	authHeader := "Authorization: Basic " + base64.StdEncoding.EncodeToString([]byte("x-access-token:"+token))
 	extraEnv := []string{
 		"GIT_CONFIG_COUNT=1",
@@ -90,6 +100,27 @@ func pushReadme(hideRepoInfo bool, token, branch string) error {
 		"GIT_CONFIG_VALUE_0=" + authHeader,
 	}
 	return runGitCommandEnv(hideRepoInfo, extraEnv, []string{authHeader, token}, "push", "origin", "--", branch)
+}
+
+// clearWorkspaceExtraheader removes any persisted
+// http.https://github.com/.extraheader from the workspace .git/config so a
+// pre-existing entry (typically left behind by actions/checkout) cannot
+// collide with the per-push header injected via GIT_CONFIG_VALUE_0. We
+// tolerate exit code 5 — git config's signal that the key is absent —
+// because workflows without actions/checkout (or with persist-credentials:
+// false) never set the entry in the first place.
+func clearWorkspaceExtraheader() error {
+	cmd := exec.Command("git", "config", "--local", "--unset-all", "http.https://github.com/.extraheader")
+	var stderr bytes.Buffer
+	cmd.Stderr = &stderr
+	err := cmd.Run()
+	if err == nil {
+		return nil
+	}
+	if exitErr, ok := err.(*exec.ExitError); ok && exitErr.ExitCode() == 5 {
+		return nil
+	}
+	return fmt.Errorf("failed to clear pre-existing extraheader: %v: %s", err, strings.TrimSpace(stderr.String()))
 }
 
 func runGitCommand(hideRepoInfo bool, args ...string) error {
@@ -121,19 +152,16 @@ func runGitCommandEnv(hideRepoInfo bool, extraEnv, redactions []string, args ...
 	}
 
 	if hideRepoInfo {
-		// Suppress output when HIDE_REPO_INFO is true to prevent leaking sensitive information
+		// Suppress output when HIDE_REPO_INFO is true to prevent leaking sensitive information.
+		// Even so, surface a sanitized version of stderr/stdout so that real failures
+		// are debuggable instead of collapsing to a bare "exit status N".
 		if err := cmd.Run(); err != nil {
-			// Sanitize error output before returning
 			sanitizedErr := redact(err.Error())
-			if stdout.Len() > 0 {
-				sanitizedErr = strings.ReplaceAll(sanitizedErr, stdout.String(), "[output hidden]")
-			}
+			sanitizedStdout := sanitizeError(errors.New(redact(stdout.String())), "", "").Error()
+			sanitizedStderr := sanitizeError(errors.New(redact(stderr.String())), "", "").Error()
 
-			if stderr.Len() > 0 {
-				sanitizedErr = strings.ReplaceAll(sanitizedErr, stderr.String(), "[output hidden]")
-			}
-
-			return fmt.Errorf("failed to run git command: %v", sanitizedErr)
+			return fmt.Errorf("failed to run 'git %v': %v\n  stdout: %s\n  stderr: %s",
+				args, sanitizedErr, sanitizedStdout, sanitizedStderr)
 		}
 	} else {
 		if err := cmd.Run(); err != nil {

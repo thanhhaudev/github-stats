@@ -119,3 +119,73 @@ func TestCommitAndPushReadme_NoTokenLeak(t *testing.T) {
 		t.Errorf("expected 'smoke test' commit in bare repo, got:\n%s", out)
 	}
 }
+
+// TestCommitAndPushReadme_ClearsPreExistingExtraheader guards the dup-
+// Authorization fix: when actions/checkout (or any earlier step) has
+// persisted an http.https://github.com/.extraheader into the workspace
+// .git/config, pushReadme must strip it before pushing so git does not
+// send two Authorization headers and trip GitHub's "Duplicate header"
+// HTTP 400.
+//
+// The local bare repo used here speaks the file:// protocol, so the
+// duplicate-header rejection itself cannot be reproduced. What we lock
+// in instead is the cleanup invariant: regardless of how the push
+// transport behaves, the pre-existing entry is gone afterwards.
+func TestCommitAndPushReadme_ClearsPreExistingExtraheader(t *testing.T) {
+	if _, err := exec.LookPath("git"); err != nil {
+		t.Skip("git not available on PATH")
+	}
+
+	tmp := t.TempDir()
+	bare := filepath.Join(tmp, "remote.git")
+	work := filepath.Join(tmp, "work")
+	if err := os.Mkdir(work, 0o755); err != nil {
+		t.Fatal(err)
+	}
+
+	runGit(t, tmp, "init", "--bare", "-b", "main", bare)
+	runGit(t, work, "init", "-b", "main")
+	runGit(t, work, "config", "user.name", "smoke")
+	runGit(t, work, "config", "user.email", "smoke@example.com")
+	runGit(t, work, "remote", "add", "origin", bare)
+
+	// Simulate actions/checkout having written its own extraheader.
+	const stalePrefix = "AUTHORIZATION: basic c3RhbGVfdG9rZW5fdmFsdWU="
+	runGit(t, work, "config", "--local", "http.https://github.com/.extraheader", stalePrefix)
+
+	if err := os.WriteFile(filepath.Join(work, "README.md"), []byte("hello\n"), 0o644); err != nil {
+		t.Fatal(err)
+	}
+
+	t.Chdir(work)
+
+	const fakeToken = "ghp_smoketest_BBBBBBBBBBBBBBBBBBBBBBBBBBB"
+
+	if err := commitAndPushReadme(fakeToken, "extraheader cleanup", "main", true); err != nil {
+		t.Fatalf("commitAndPushReadme: %v", err)
+	}
+
+	cfg, err := os.ReadFile(filepath.Join(work, ".git", "config"))
+	if err != nil {
+		t.Fatal(err)
+	}
+	s := string(cfg)
+
+	if strings.Contains(s, stalePrefix) {
+		t.Errorf("pre-existing extraheader was not cleared from .git/config:\n%s", s)
+	}
+	// Match the config key explicitly. The temp-dir path embeds the test name
+	// ("...ClearsPreExistingExtraheader..."), so a substring search would
+	// always hit it via remote.url. Look for the `key = value` form git
+	// writes for extraheader lines instead.
+	for line := range strings.SplitSeq(s, "\n") {
+		trimmed := strings.TrimSpace(line)
+		if strings.HasPrefix(strings.ToLower(trimmed), "extraheader") {
+			t.Errorf(".git/config still has an extraheader entry after push:\n%s", s)
+			break
+		}
+	}
+	if strings.Contains(s, fakeToken) {
+		t.Errorf(".git/config contains push token after push:\n%s", s)
+	}
+}
