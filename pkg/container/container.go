@@ -217,6 +217,12 @@ func (d *DataContainer) InitRepositories(ctx context.Context) error {
 // computed data intact; affected commits keep an empty language map and are
 // retried on the next run (they are not written to the OID cache).
 func (d *DataContainer) enrichCommitLanguages(ctx context.Context, repo github.Repository, commits []github.Commit, semaphore chan struct{}) []github.Commit {
+	// Nothing renders language data unless a language metric is requested, so skip
+	// the per-commit REST analysis entirely otherwise.
+	if !d.Config.WantsLanguageMetrics() {
+		return commits
+	}
+
 	for i := range commits {
 		commits[i].RepoURL = repo.Url
 

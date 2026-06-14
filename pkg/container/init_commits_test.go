@@ -106,7 +106,7 @@ func TestEnrichCommitLanguagesSkipsMergeCommits(t *testing.T) {
 			return []github.CommitFile{{Filename: "main.go", Additions: 999}}, nil
 		},
 	}
-	cfg := &config.Config{SimpleLogs: true}
+	cfg := &config.Config{SimpleLogs: true, ShowMetrics: []string{config.MetricLanguagesAndTools}}
 	d := NewDataContainer(log.Default(), cm, cfg)
 	repo := github.Repository{Name: "r", Url: "https://github.com/me/r"}
 	repo.Owner.Login = "me"
@@ -171,6 +171,32 @@ func TestInitCommitsBoundsEnrichmentConcurrency(t *testing.T) {
 	}
 }
 
+// TestEnrichCommitLanguagesSkippedWhenNoLanguageMetric verifies no per-commit
+// REST fetch happens when neither language metric is in SHOW_METRICS — the data
+// would never be rendered, so paying for it (and the rate-limit risk) is waste.
+func TestEnrichCommitLanguagesSkippedWhenNoLanguageMetric(t *testing.T) {
+	called := false
+	cm := &fakeDataClientManager{
+		commitFilesFn: func(owner, name, sha string) ([]github.CommitFile, error) {
+			called = true
+			return []github.CommitFile{{Filename: "main.go", Additions: 5}}, nil
+		},
+	}
+	cfg := &config.Config{SimpleLogs: true, ShowMetrics: []string{config.MetricCodingStreak}}
+	d := NewDataContainer(log.Default(), cm, cfg)
+	repo := github.Repository{Name: "r", Url: "https://github.com/me/r"}
+	repo.Owner.Login = "me"
+
+	out := d.enrichCommitLanguages(context.Background(), repo, []github.Commit{{OID: "a"}}, make(chan struct{}, 5))
+
+	if called {
+		t.Error("enrichment must not fetch when no language metric is requested")
+	}
+	if len(out[0].Languages) != 0 {
+		t.Errorf("expected no languages, got %v", out[0].Languages)
+	}
+}
+
 func TestDataContainerInitCommitsReturnsBranchError(t *testing.T) {
 	branchErr := errors.New("branch fetch failed")
 	cm := &fakeDataClientManager{
@@ -202,7 +228,7 @@ func TestDataContainerInitCommitsReturnsBranchError(t *testing.T) {
 
 func TestDataContainerInitCommitsDoesNotRequireContextClock(t *testing.T) {
 	cm := &fakeDataClientManager{}
-	cfg := &config.Config{OnlyMainBranch: true, SimpleLogs: true}
+	cfg := &config.Config{OnlyMainBranch: true, SimpleLogs: true, ShowMetrics: []string{config.MetricLanguagesAndTools}}
 	d := NewDataContainer(log.Default(), cm, cfg)
 	d.Data.Viewer = &github.Viewer{ID: "viewer-id"}
 	repo := github.Repository{Name: "repo-one", Url: "https://github.com/acme/repo-one"}
@@ -227,7 +253,7 @@ func TestInitCommitsEnrichesLanguagesAndCachesByOID(t *testing.T) {
 			"refs/heads/main": {{Filename: "main.go", Additions: 12}},
 		},
 	}
-	cfg := &config.Config{OnlyMainBranch: true, SimpleLogs: true}
+	cfg := &config.Config{OnlyMainBranch: true, SimpleLogs: true, ShowMetrics: []string{config.MetricLanguagesAndTools}}
 	d := NewDataContainer(log.Default(), cm, cfg)
 	d.Data.Viewer = &github.Viewer{ID: "viewer-id"}
 	repo := github.Repository{Name: "repo-one", Url: "https://github.com/acme/repo-one"}
@@ -252,7 +278,7 @@ func TestInitCommitsEnrichesLanguagesAndCachesByOID(t *testing.T) {
 
 func TestInitCommitsRateLimitDegradesGracefully(t *testing.T) {
 	cm := &fakeDataClientManager{commitFilesErr: github.ErrRateLimited}
-	cfg := &config.Config{OnlyMainBranch: true, SimpleLogs: true}
+	cfg := &config.Config{OnlyMainBranch: true, SimpleLogs: true, ShowMetrics: []string{config.MetricLanguagesAndTools}}
 	d := NewDataContainer(log.Default(), cm, cfg)
 	d.Data.Viewer = &github.Viewer{ID: "viewer-id"}
 	repo := github.Repository{Name: "repo-one", Url: "https://github.com/acme/repo-one"}
@@ -279,7 +305,7 @@ func TestInitCommitsRecoversAfterRateLimitedRunWithUnchangedPush(t *testing.T) {
 		Repos:           map[string]*cache.RepoEntry{},
 		CommitLanguages: map[string]map[string]int{},
 	}
-	cfg := &config.Config{OnlyMainBranch: true, SimpleLogs: true}
+	cfg := &config.Config{OnlyMainBranch: true, SimpleLogs: true, ShowMetrics: []string{config.MetricLanguagesAndTools}}
 	repo := github.Repository{Name: "repo-one", Url: "https://github.com/acme/repo-one"}
 	repo.Owner.Login = "acme"
 
@@ -329,7 +355,7 @@ func TestInitCommitsPerRepoLanguagesSurviveGlobalDedup(t *testing.T) {
 			"refs/heads/main": {{Filename: "main.go", Additions: 10}},
 		},
 	}
-	cfg := &config.Config{OnlyMainBranch: true, SimpleLogs: true}
+	cfg := &config.Config{OnlyMainBranch: true, SimpleLogs: true, ShowMetrics: []string{config.MetricLanguagesAndTools}}
 	d := NewDataContainer(log.Default(), cm, cfg)
 	d.Data.Viewer = &github.Viewer{ID: "viewer-id"}
 	repoA := github.Repository{Name: "repo-a", Url: "https://github.com/me/repo-a"}
@@ -369,7 +395,7 @@ func TestInitCommitsReconcilesPartiallyFailedSharedOID(t *testing.T) {
 			return nil, errors.New("transient fetch failure") // fails for repo-b
 		},
 	}
-	cfg := &config.Config{OnlyMainBranch: true, SimpleLogs: true}
+	cfg := &config.Config{OnlyMainBranch: true, SimpleLogs: true, ShowMetrics: []string{config.MetricLanguagesAndTools}}
 	d := NewDataContainer(log.Default(), cm, cfg)
 	d.Data.Viewer = &github.Viewer{ID: "viewer-id"}
 	repoA := github.Repository{Name: "repo-a", Url: "https://github.com/me/repo-a"}

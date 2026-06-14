@@ -258,3 +258,16 @@ func contains(slice []string, item string) bool {
 	}
 	return false
 }
+
+// WantsLanguageMetrics reports whether either language-based metric is requested.
+// When neither is shown, the expensive per-commit language enrichment can be
+// skipped entirely.
+func (c *Config) WantsLanguageMetrics() bool {
+	for _, m := range c.ShowMetrics {
+		switch strings.TrimSpace(m) {
+		case MetricLanguagesAndTools, MetricLanguagePerRepo:
+			return true
+		}
+	}
+	return false
+}
