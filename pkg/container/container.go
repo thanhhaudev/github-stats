@@ -336,33 +336,55 @@ func (d *DataContainer) InitCommits(ctx context.Context) error {
 		close(resultChan)
 	}()
 
-	repoLanguages := make(map[string]map[string]int) // repoURL -> language -> additions
-	repoSeenOIDs := make(map[string]map[string]bool) // repoURL -> oid -> seen (dedup branches within a repo)
+	var allCommits []github.Commit
 	for result := range resultChan {
 		if result.err != nil {
 			return result.err
 		}
-		for _, commit := range result.commits {
-			// Per-repo attribution: count each repo's own commits (deduped by OID
-			// within that repo only). A commit shared across repos contributes to
-			// each one, so the per-repo metric does not depend on global dedup order.
-			if repoSeenOIDs[commit.RepoURL] == nil {
-				repoSeenOIDs[commit.RepoURL] = make(map[string]bool)
-				repoLanguages[commit.RepoURL] = make(map[string]int)
-			}
-			if !repoSeenOIDs[commit.RepoURL][commit.OID] {
-				repoSeenOIDs[commit.RepoURL][commit.OID] = true
-				for lang, additions := range commit.Languages {
-					repoLanguages[commit.RepoURL][lang] += additions
-				}
-			}
+		allCommits = append(allCommits, result.commits...)
+	}
 
-			// Global dedup: each commit counted once for totals/commit-count/streaks.
-			if !seenOIDs[commit.OID] {
-				seenOIDs[commit.OID] = true
-				commit.CommittedDate = d.Clock.ToClockTz(commit.CommittedDate)
-				d.Data.Commits = append(d.Data.Commits, commit)
+	// Reconcile languages per OID before building any metric. The same commit can
+	// appear in several repos (shared upstream/mirror); under partial enrichment
+	// failure (rate limit or a transient REST error) one occurrence may carry the
+	// analyzed languages while another is empty. Prefer any non-empty result so
+	// both the totals and every repo's profile are deterministic regardless of
+	// goroutine arrival order or which repo's fetch failed.
+	reconciled := make(map[string]map[string]int) // oid -> language -> additions
+	for _, commit := range allCommits {
+		if len(commit.Languages) > 0 {
+			if _, ok := reconciled[commit.OID]; !ok {
+				reconciled[commit.OID] = commit.Languages
 			}
+		}
+	}
+
+	repoLanguages := make(map[string]map[string]int) // repoURL -> language -> additions
+	repoSeenOIDs := make(map[string]map[string]bool) // repoURL -> oid -> seen (dedup branches within a repo)
+	for _, commit := range allCommits {
+		langs := reconciled[commit.OID] // nil when no occurrence was enriched
+
+		// Per-repo attribution: count each repo's own commits (deduped by OID
+		// within that repo only). A commit shared across repos contributes to each
+		// one, so the per-repo metric does not depend on global dedup order.
+		if repoSeenOIDs[commit.RepoURL] == nil {
+			repoSeenOIDs[commit.RepoURL] = make(map[string]bool)
+			repoLanguages[commit.RepoURL] = make(map[string]int)
+		}
+		if !repoSeenOIDs[commit.RepoURL][commit.OID] {
+			repoSeenOIDs[commit.RepoURL][commit.OID] = true
+			for lang, additions := range langs {
+				repoLanguages[commit.RepoURL][lang] += additions
+			}
+		}
+
+		// Global dedup: each commit counted once for totals/commit-count/streaks,
+		// using the reconciled languages.
+		if !seenOIDs[commit.OID] {
+			seenOIDs[commit.OID] = true
+			commit.CommittedDate = d.Clock.ToClockTz(commit.CommittedDate)
+			commit.Languages = langs
+			d.Data.Commits = append(d.Data.Commits, commit)
 		}
 	}
 	d.Data.RepoLanguages = repoLanguages

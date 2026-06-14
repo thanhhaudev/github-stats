@@ -25,6 +25,7 @@ type fakeDataClientManager struct {
 	allTimeErr     error
 	commitFiles    map[string][]github.CommitFile
 	commitFilesErr error
+	commitFilesFn  func(owner, name, sha string) ([]github.CommitFile, error)
 }
 
 func (f *fakeDataClientManager) HasGitHubClient() bool {
@@ -76,6 +77,9 @@ func (f *fakeDataClientManager) GetWakaTimeAllTimeSinceToday(ctx context.Context
 func (f *fakeDataClientManager) GetCommitFiles(ctx context.Context, owner, name, sha string) ([]github.CommitFile, error) {
 	f.mu.Lock()
 	defer f.mu.Unlock()
+	if f.commitFilesFn != nil {
+		return f.commitFilesFn(owner, name, sha)
+	}
 	if f.commitFilesErr != nil {
 		return nil, f.commitFilesErr
 	}
@@ -264,5 +268,46 @@ func TestInitCommitsPerRepoLanguagesSurviveGlobalDedup(t *testing.T) {
 	}
 	if lang.RepoCount["Go"] != 2 {
 		t.Errorf("RepoCount[Go] = %d, want 2 (both repos attributed); full=%v", lang.RepoCount["Go"], lang.RepoCount)
+	}
+}
+
+// TestInitCommitsReconcilesPartiallyFailedSharedOID covers the case where the
+// same commit OID exists in two repos but its file analysis succeeds in one and
+// fails (transient error) in the other. After reconciliation both the totals and
+// every repo's per-repo profile must use the successful result, deterministically.
+func TestInitCommitsReconcilesPartiallyFailedSharedOID(t *testing.T) {
+	cm := &fakeDataClientManager{
+		commitFilesFn: func(owner, name, sha string) ([]github.CommitFile, error) {
+			if owner == "me" { // succeeds for repo-a
+				return []github.CommitFile{{Filename: "main.go", Additions: 10}}, nil
+			}
+			return nil, errors.New("transient fetch failure") // fails for repo-b
+		},
+	}
+	cfg := &config.Config{OnlyMainBranch: true, SimpleLogs: true}
+	d := NewDataContainer(log.Default(), cm, cfg)
+	d.Data.Viewer = &github.Viewer{ID: "viewer-id"}
+	repoA := github.Repository{Name: "repo-a", Url: "https://github.com/me/repo-a"}
+	repoA.Owner.Login = "me"
+	repoB := github.Repository{Name: "repo-b", Url: "https://github.com/up/repo-b"}
+	repoB.Owner.Login = "up"
+	d.Data.Repositories = []github.Repository{repoA, repoB}
+
+	if err := d.InitCommits(context.Background()); err != nil {
+		t.Fatalf("InitCommits error: %v", err)
+	}
+
+	lang := d.CalculateLanguages()
+	// Totals must use the successful analysis regardless of which repo's result
+	// reached the channel first.
+	if lang.TotalSize != 10 {
+		t.Errorf("TotalSize = %d, want 10 (reconciled from the successful repo)", lang.TotalSize)
+	}
+	if got := d.Data.Commits[0].Languages["Go"]; got != 10 {
+		t.Errorf("global commit Languages[Go] = %d, want 10 (reconciled)", got)
+	}
+	// Both repos attributed Go even though repo-b's own fetch failed.
+	if lang.RepoCount["Go"] != 2 {
+		t.Errorf("RepoCount[Go] = %d, want 2 (both repos via reconciliation); full=%v", lang.RepoCount["Go"], lang.RepoCount)
 	}
 }
