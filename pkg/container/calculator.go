@@ -6,6 +6,7 @@ import (
 	"time"
 
 	"github.com/thanhhaudev/github-stats/pkg/github"
+	"github.com/thanhhaudev/github-stats/pkg/language"
 )
 
 // CommitStats stores the calculated commit data
@@ -23,6 +24,7 @@ type LanguageStats struct {
 	TotalLanguages int
 	TotalSize      int
 	Languages      map[string][2]interface{}
+	RepoCount      map[string]int // language -> number of repos where it is the user's top language
 }
 
 // AIStats stores AI vs human attribution from WakaTime's top-level totals.
@@ -100,26 +102,39 @@ func (d *DataContainer) CalculateCommits() *CommitStats {
 	}
 }
 
-// CalculateLanguages calculates the number of languages used in repositories on GitHub
+// CalculateLanguages aggregates the languages the user actually wrote, derived
+// from the files changed in their commits (see enrichCommitLanguages). Size is
+// measured in additions. It also tallies, per repo, the user's single most-used
+// language for the LANGUAGE_PER_REPO metric.
 func (d *DataContainer) CalculateLanguages() *LanguageStats {
-	totalLanguages := make(map[string][2]interface{}) // [name][2]string{color, size}
+	totalLanguages := make(map[string][2]interface{}) // [name]{color, size}
 	totalSize := 0
+	perRepo := make(map[string]map[string]int) // repoURL -> language -> additions
 
-	for _, repo := range d.Data.Repositories {
-		for _, lang := range repo.Languages.Edges {
-			name := lang.Node.Name
-			color := lang.Node.Color
-			size := lang.Size
+	for _, commit := range d.Data.Commits {
+		repo := perRepo[commit.RepoURL]
+		if repo == nil {
+			repo = make(map[string]int)
+			perRepo[commit.RepoURL] = repo
+		}
 
-			if _, ok := totalLanguages[name]; ok {
-				langData := totalLanguages[name]
-				langData[1] = langData[1].(int) + size
-				totalLanguages[name] = langData
+		for name, size := range commit.Languages {
+			if existing, ok := totalLanguages[name]; ok {
+				existing[1] = existing[1].(int) + size
+				totalLanguages[name] = existing
 			} else {
-				totalLanguages[name] = [2]interface{}{color, size}
+				totalLanguages[name] = [2]interface{}{language.Color(name), size}
 			}
-
 			totalSize += size
+			repo[name] += size
+		}
+	}
+
+	repoCount := make(map[string]int)
+	for _, langs := range perRepo {
+		top := dominantLanguage(langs)
+		if top != "" {
+			repoCount[top]++
 		}
 	}
 
@@ -127,7 +142,29 @@ func (d *DataContainer) CalculateLanguages() *LanguageStats {
 		TotalLanguages: len(totalLanguages),
 		TotalSize:      totalSize,
 		Languages:      totalLanguages,
+		RepoCount:      repoCount,
 	}
+}
+
+// dominantLanguage returns the language with the most additions in a repo.
+// Ties break alphabetically so the result is deterministic.
+func dominantLanguage(langs map[string]int) string {
+	names := make([]string, 0, len(langs))
+	for name := range langs {
+		names = append(names, name)
+	}
+	sort.Strings(names)
+
+	top := ""
+	best := 0
+	for _, name := range names {
+		if langs[name] > best {
+			best = langs[name]
+			top = name
+		}
+	}
+
+	return top
 }
 
 // truncateToMidnight truncates a time to midnight in its local timezone

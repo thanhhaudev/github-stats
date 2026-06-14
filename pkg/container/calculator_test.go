@@ -209,6 +209,31 @@ func TestCalculateAIStats(t *testing.T) {
 	}
 }
 
+func TestCalculateLanguagesFromCommits(t *testing.T) {
+	d := &DataContainer{}
+	d.Data.Commits = []github.Commit{
+		{OID: "a", RepoURL: "r1", Languages: map[string]int{"Go": 100, "CSS": 10}},
+		{OID: "b", RepoURL: "r1", Languages: map[string]int{"Go": 50}},
+		{OID: "c", RepoURL: "r2", Languages: map[string]int{"CSS": 200}},
+	}
+
+	got := d.CalculateLanguages()
+
+	if got.TotalSize != 360 {
+		t.Errorf("TotalSize = %d, want 360", got.TotalSize)
+	}
+	if got.Languages["Go"][1].(int) != 150 {
+		t.Errorf("Go size = %v, want 150", got.Languages["Go"][1])
+	}
+	if got.Languages["Go"][0].(string) == "" {
+		t.Error("expected a color for Go")
+	}
+	// r1 dominant = Go (150 vs 10), r2 dominant = CSS (200). One repo each.
+	if got.RepoCount["Go"] != 1 || got.RepoCount["CSS"] != 1 {
+		t.Errorf("RepoCount = %v, want Go:1 CSS:1", got.RepoCount)
+	}
+}
+
 func TestCacheRepoCountSuffix(t *testing.T) {
 	tests := []struct {
 		name   string
