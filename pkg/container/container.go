@@ -7,6 +7,7 @@ import (
 	"log"
 	"strings"
 	"sync"
+	"sync/atomic"
 
 	"golang.org/x/sync/errgroup"
 
@@ -14,6 +15,7 @@ import (
 	"github.com/thanhhaudev/github-stats/pkg/clock"
 	"github.com/thanhhaudev/github-stats/pkg/config"
 	"github.com/thanhhaudev/github-stats/pkg/github"
+	"github.com/thanhhaudev/github-stats/pkg/language"
 	"github.com/thanhhaudev/github-stats/pkg/wakatime"
 	"github.com/thanhhaudev/github-stats/pkg/writer"
 )
@@ -37,6 +39,8 @@ type DataContainer struct {
 		WakaTime        *wakatime.Stats
 		WakaTimeAllTime *wakatime.AllTimeSinceTodayStats
 	}
+	langRateLimited   atomic.Bool
+	langRateLimitOnce sync.Once
 }
 
 type dataClientManager interface {
@@ -201,6 +205,52 @@ func (d *DataContainer) InitRepositories(ctx context.Context) error {
 	return nil
 }
 
+// enrichCommitLanguages fills each commit's RepoURL and Languages map. It reuses
+// the per-OID cache (commits are immutable) so only new OIDs hit the REST API.
+// A rate-limit response stops further REST calls for the run but leaves already
+// computed data intact; affected commits keep an empty language map and are
+// retried on the next run (they are not written to the OID cache).
+func (d *DataContainer) enrichCommitLanguages(ctx context.Context, repo github.Repository, commits []github.Commit) []github.Commit {
+	for i := range commits {
+		commits[i].RepoURL = repo.Url
+
+		if d.Cache != nil {
+			if langs, ok := d.Cache.LookupCommitLanguages(commits[i].OID); ok {
+				commits[i].Languages = langs
+				continue
+			}
+		}
+
+		if d.langRateLimited.Load() {
+			continue
+		}
+
+		files, err := d.ClientManager.GetCommitFiles(ctx, repo.Owner.Login, repo.Name, commits[i].OID)
+		if err != nil {
+			if errors.Is(err, github.ErrRateLimited) {
+				d.langRateLimited.Store(true)
+				d.langRateLimitOnce.Do(func() {
+					d.Logger.Println("⚠️ GitHub REST rate limit reached; language stats will complete on the next run")
+				})
+				continue
+			}
+			// A single inaccessible commit must not fail the whole action.
+			if !d.Config.HideRepoInfo && d.Config.Debug && !d.Config.SimpleLogs {
+				d.Logger.Printf("skip language analysis for one commit: %v", err)
+			}
+			continue
+		}
+
+		langs := language.FromFiles(files)
+		commits[i].Languages = langs
+		if d.Cache != nil {
+			d.Cache.SetCommitLanguages(commits[i].OID, langs)
+		}
+	}
+
+	return commits
+}
+
 // InitCommits initializes the branches of the repositories
 func (d *DataContainer) InitCommits(ctx context.Context) error {
 	if !d.Config.SimpleLogs {
@@ -289,6 +339,14 @@ func (d *DataContainer) InitCommits(ctx context.Context) error {
 		}
 	}
 
+	if d.Cache != nil {
+		liveOIDs := make([]string, 0, len(seenOIDs))
+		for oid := range seenOIDs {
+			liveOIDs = append(liveOIDs, oid)
+		}
+		d.Cache.PruneCommitLanguages(liveOIDs)
+	}
+
 	if !d.Config.SimpleLogs {
 		d.Logger.Println("Fetched commits successfully")
 	}
@@ -348,7 +406,7 @@ func (d *DataContainer) fetchRepoCommits(
 			return nil, err
 		}
 
-		return fetched, nil
+		return d.enrichCommitLanguages(ctx, repo, fetched), nil
 	}
 
 	if !hiddenRepoInfo && !d.Config.SimpleLogs {
@@ -365,7 +423,7 @@ func (d *DataContainer) fetchRepoCommits(
 		return nil, fmt.Errorf("fetch commits for repo %s branch %s: %w", repo.Name, defaultBranch.Name, err)
 	}
 
-	return commits, nil
+	return d.enrichCommitLanguages(ctx, repo, commits), nil
 }
 
 // InitWakaStats initializes the WakaTime statistics

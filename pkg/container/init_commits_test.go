@@ -130,3 +130,52 @@ func TestDataContainerInitCommitsDoesNotRequireContextClock(t *testing.T) {
 		t.Fatalf("expected default branch commit, got %q", d.Data.Commits[0].OID)
 	}
 }
+
+func TestInitCommitsEnrichesLanguagesAndCachesByOID(t *testing.T) {
+	cm := &fakeDataClientManager{
+		commitFiles: map[string][]github.CommitFile{
+			"refs/heads/main": {{Filename: "main.go", Additions: 12}},
+		},
+	}
+	cfg := &config.Config{OnlyMainBranch: true, SimpleLogs: true}
+	d := NewDataContainer(log.Default(), cm, cfg)
+	d.Data.Viewer = &github.Viewer{ID: "viewer-id"}
+	repo := github.Repository{Name: "repo-one", Url: "https://github.com/acme/repo-one"}
+	repo.Owner.Login = "acme"
+	d.Data.Repositories = []github.Repository{repo}
+
+	if err := d.InitCommits(context.Background()); err != nil {
+		t.Fatalf("InitCommits error: %v", err)
+	}
+
+	if len(d.Data.Commits) != 1 {
+		t.Fatalf("expected 1 commit, got %d", len(d.Data.Commits))
+	}
+	c := d.Data.Commits[0]
+	if c.Languages["Go"] != 12 {
+		t.Errorf("expected Go=12 languages, got %v", c.Languages)
+	}
+	if c.RepoURL != repo.Url {
+		t.Errorf("expected RepoURL %q, got %q", repo.Url, c.RepoURL)
+	}
+}
+
+func TestInitCommitsRateLimitDegradesGracefully(t *testing.T) {
+	cm := &fakeDataClientManager{commitFilesErr: github.ErrRateLimited}
+	cfg := &config.Config{OnlyMainBranch: true, SimpleLogs: true}
+	d := NewDataContainer(log.Default(), cm, cfg)
+	d.Data.Viewer = &github.Viewer{ID: "viewer-id"}
+	repo := github.Repository{Name: "repo-one", Url: "https://github.com/acme/repo-one"}
+	repo.Owner.Login = "acme"
+	d.Data.Repositories = []github.Repository{repo}
+
+	if err := d.InitCommits(context.Background()); err != nil {
+		t.Fatalf("rate limit should not fail the run, got: %v", err)
+	}
+	if len(d.Data.Commits) != 1 {
+		t.Fatalf("expected the commit to still be recorded, got %d", len(d.Data.Commits))
+	}
+	if len(d.Data.Commits[0].Languages) != 0 {
+		t.Errorf("expected empty languages under rate limit, got %v", d.Data.Commits[0].Languages)
+	}
+}
