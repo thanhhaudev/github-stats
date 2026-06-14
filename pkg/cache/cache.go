@@ -31,9 +31,11 @@ const RepoSchemaVersion = 3
 const WakaTimeSchemaVersion = 1
 
 // RepoEntry holds the minimum data needed to decide cache hit/miss and replay
-// a fetch result. We deliberately do NOT store the full Repository struct —
-// fields like IsPrivate, Languages, Owner, Name reduce blast radius if the
-// cache file ever leaks (e.g. accidental commit by the user).
+// a fetch result. We deliberately do NOT store the full Repository struct (e.g.
+// IsPrivate, Owner) to limit blast radius if the cache file ever leaks. Note the
+// cached Commits now carry RepoURL and a per-commit Languages map; the repo URL
+// is already the Repos map key, so this persists no identity beyond what the
+// cache key itself exposes.
 type RepoEntry struct {
 	PushedAt time.Time       `json:"pushedAt"`
 	Commits  []github.Commit `json:"commits"`

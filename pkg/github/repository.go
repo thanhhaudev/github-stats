@@ -11,12 +11,12 @@ type RepositoryService struct {
 }
 
 type Repository struct {
-	Name            string    `json:"name"`
-	Url             string    `json:"url"`
-	IsPrivate       bool      `json:"isPrivate"`
-	IsFork          bool      `json:"isFork"`
-	PushedAt        time.Time `json:"pushedAt"`
-	Owner struct {
+	Name      string    `json:"name"`
+	Url       string    `json:"url"`
+	IsPrivate bool      `json:"isPrivate"`
+	IsFork    bool      `json:"isFork"`
+	PushedAt  time.Time `json:"pushedAt"`
+	Owner     struct {
 		Login string `json:"login"`
 	} `json:"owner"`
 }
