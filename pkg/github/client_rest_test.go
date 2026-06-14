@@ -51,6 +51,25 @@ func TestGetWithContextReportsRateLimit(t *testing.T) {
 	}
 }
 
+func TestGetWithContextDetectsSecondaryRateLimit(t *testing.T) {
+	srv := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		// Secondary rate limit: 403 with Retry-After but a non-zero remaining.
+		w.Header().Set("Retry-After", "60")
+		w.Header().Set("X-RateLimit-Remaining", "42")
+		w.WriteHeader(http.StatusForbidden)
+	}))
+	defer srv.Close()
+
+	c := NewClient("tok", false, false)
+	c.origin = srv.URL
+
+	var detail struct{}
+	err := c.GetWithContext(context.Background(), "/repos/o/n/commits/sha", &detail)
+	if !errors.Is(err, ErrRateLimited) {
+		t.Fatalf("expected ErrRateLimited for secondary limit, got %v", err)
+	}
+}
+
 func TestCommitFilesFollowsLinkPagination(t *testing.T) {
 	var srv *httptest.Server
 	srv = httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {

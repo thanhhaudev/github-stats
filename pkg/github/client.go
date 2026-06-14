@@ -180,8 +180,13 @@ func (c *Client) getURL(ctx context.Context, url string, v interface{}) (http.He
 	}
 	defer func() { _ = resp.Body.Close() }()
 
+	// Detect both primary and secondary rate limits. Primary: 429, or 403 with
+	// X-RateLimit-Remaining: 0. Secondary (abuse) limits return 403/429 with a
+	// Retry-After header and may report a non-zero remaining; treat those as
+	// rate-limited too so enrichment degrades gracefully instead of hammering on.
 	if resp.StatusCode == http.StatusTooManyRequests ||
-		(resp.StatusCode == http.StatusForbidden && resp.Header.Get("X-RateLimit-Remaining") == "0") {
+		(resp.StatusCode == http.StatusForbidden &&
+			(resp.Header.Get("X-RateLimit-Remaining") == "0" || resp.Header.Get("Retry-After") != "")) {
 		return nil, ErrRateLimited
 	}
 	if resp.StatusCode != http.StatusOK {
