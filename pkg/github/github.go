@@ -92,6 +92,9 @@ var Queries = map[string]string{
 								deletions
 								committedDate
 								oid
+								parents {
+									totalCount
+								}
 							}
 							pageInfo {
 								endCursor

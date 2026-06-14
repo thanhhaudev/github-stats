@@ -86,6 +86,41 @@ func (f *fakeDataClientManager) GetCommitFiles(ctx context.Context, owner, name,
 	return f.commitFiles[sha], nil
 }
 
+// TestEnrichCommitLanguagesSkipsMergeCommits verifies merge commits (more than
+// one parent) are excluded from language attribution: their REST diff is the
+// merged branch's changes (other authors' code), which must not be credited to
+// the user. Non-merge commits are still enriched.
+func TestEnrichCommitLanguagesSkipsMergeCommits(t *testing.T) {
+	called := false
+	cm := &fakeDataClientManager{
+		commitFilesFn: func(owner, name, sha string) ([]github.CommitFile, error) {
+			called = true
+			return []github.CommitFile{{Filename: "main.go", Additions: 999}}, nil
+		},
+	}
+	cfg := &config.Config{SimpleLogs: true}
+	d := NewDataContainer(log.Default(), cm, cfg)
+	repo := github.Repository{Name: "r", Url: "https://github.com/me/r"}
+	repo.Owner.Login = "me"
+
+	merge := github.Commit{OID: "merge"}
+	merge.Parents.TotalCount = 2
+	normal := github.Commit{OID: "normal"}
+	normal.Parents.TotalCount = 1
+
+	out := d.enrichCommitLanguages(context.Background(), repo, []github.Commit{merge, normal})
+
+	if len(out[0].Languages) != 0 {
+		t.Errorf("merge commit must have no language attribution, got %v", out[0].Languages)
+	}
+	if out[1].Languages["Go"] != 999 {
+		t.Errorf("normal commit should be enriched, got %v", out[1].Languages)
+	}
+	if !called {
+		t.Error("expected a REST fetch for the non-merge commit")
+	}
+}
+
 func TestDataContainerInitCommitsReturnsBranchError(t *testing.T) {
 	branchErr := errors.New("branch fetch failed")
 	cm := &fakeDataClientManager{

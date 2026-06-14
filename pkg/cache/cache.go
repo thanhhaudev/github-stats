@@ -20,7 +20,7 @@ import (
 // RepoSchemaVersion bumps whenever the repo-commit on-disk format changes
 // incompatibly. A mismatch drops the cached repos (one slow run after the
 // upgrade) but leaves the WakaTime snapshot intact.
-const RepoSchemaVersion = 3
+const RepoSchemaVersion = 4
 
 // WakaTimeSchemaVersion bumps whenever the WakaTime snapshot on-disk format
 // changes incompatibly. It is independent of RepoSchemaVersion so a repo-commit

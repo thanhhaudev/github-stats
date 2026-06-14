@@ -61,12 +61,15 @@ func (r *RepositoryService) Owned(ctx context.Context, request *Request) (*Repos
 }
 
 type Commit struct {
-	Additions     int            `json:"additions"`
-	Deletions     int            `json:"deletions"`
-	CommittedDate time.Time      `json:"committedDate"`
-	OID           string         `json:"oid"`
-	RepoURL       string         `json:"repoURL,omitempty"`   // set in code, not from GraphQL
-	Languages     map[string]int `json:"languages,omitempty"` // language -> additions, filled by enrichment
+	Additions     int       `json:"additions"`
+	Deletions     int       `json:"deletions"`
+	CommittedDate time.Time `json:"committedDate"`
+	OID           string    `json:"oid"`
+	Parents       struct {
+		TotalCount int `json:"totalCount"`
+	} `json:"parents"`
+	RepoURL   string         `json:"repoURL,omitempty"`   // set in code, not from GraphQL
+	Languages map[string]int `json:"languages,omitempty"` // language -> additions, filled by enrichment
 }
 
 type Commits struct {

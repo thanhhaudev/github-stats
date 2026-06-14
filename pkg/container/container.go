@@ -220,6 +220,15 @@ func (d *DataContainer) enrichCommitLanguages(ctx context.Context, repo github.R
 	for i := range commits {
 		commits[i].RepoURL = repo.Url
 
+		// Merge commits are authored by whoever merged the PR, but their diff is the
+		// merged branch's changes (often other authors' code). Excluding them from
+		// language attribution keeps "languages the user wrote" honest. They still
+		// count toward commit-based metrics. Checked before the cache lookup so a
+		// merge OID cached by an older binary is not reused.
+		if commits[i].Parents.TotalCount > 1 {
+			continue
+		}
+
 		if d.Cache != nil {
 			if langs, ok := d.Cache.LookupCommitLanguages(commits[i].OID); ok {
 				commits[i].Languages = langs
