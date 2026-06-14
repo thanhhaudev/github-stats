@@ -80,6 +80,13 @@ type Commits struct {
 	PageInfo PageInfo `json:"pageInfo"`
 }
 
+// CommitFile is one entry of a REST commit's files[] array.
+type CommitFile struct {
+	Filename  string `json:"filename"`
+	Additions int    `json:"additions"`
+	Deletions int    `json:"deletions"`
+}
+
 // Commits returns the commits of a repository
 func (r *RepositoryService) Commits(ctx context.Context, request *Request) (*Commits, error) {
 	var resp struct {
