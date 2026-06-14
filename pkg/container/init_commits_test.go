@@ -9,6 +9,7 @@ import (
 	"testing"
 	"time"
 
+	"github.com/thanhhaudev/github-stats/pkg/cache"
 	"github.com/thanhhaudev/github-stats/pkg/config"
 	"github.com/thanhhaudev/github-stats/pkg/github"
 	"github.com/thanhhaudev/github-stats/pkg/wakatime"
@@ -177,5 +178,52 @@ func TestInitCommitsRateLimitDegradesGracefully(t *testing.T) {
 	}
 	if len(d.Data.Commits[0].Languages) != 0 {
 		t.Errorf("expected empty languages under rate limit, got %v", d.Data.Commits[0].Languages)
+	}
+}
+
+// TestInitCommitsRecoversAfterRateLimitedRunWithUnchangedPush verifies that a
+// commit cached with empty languages during a rate-limited run is re-enriched on
+// a later run with the SAME pushedAt (repo-cache hit), instead of being stuck
+// empty forever.
+func TestInitCommitsRecoversAfterRateLimitedRunWithUnchangedPush(t *testing.T) {
+	shared := &cache.Cache{
+		Repos:           map[string]*cache.RepoEntry{},
+		CommitLanguages: map[string]map[string]int{},
+	}
+	cfg := &config.Config{OnlyMainBranch: true, SimpleLogs: true}
+	repo := github.Repository{Name: "repo-one", Url: "https://github.com/acme/repo-one"}
+	repo.Owner.Login = "acme"
+
+	// Run 1: REST is rate-limited, so the single commit is cached with no languages.
+	cm1 := &fakeDataClientManager{commitFilesErr: github.ErrRateLimited}
+	d1 := NewDataContainer(log.Default(), cm1, cfg)
+	d1.Cache = shared
+	d1.Data.Viewer = &github.Viewer{ID: "viewer-id"}
+	d1.Data.Repositories = []github.Repository{repo}
+	if err := d1.InitCommits(context.Background()); err != nil {
+		t.Fatalf("run 1 InitCommits error: %v", err)
+	}
+	if len(d1.Data.Commits[0].Languages) != 0 {
+		t.Fatalf("run 1: expected empty languages, got %v", d1.Data.Commits[0].Languages)
+	}
+
+	// Run 2: SAME cache, SAME pushedAt (repo-cache hit), but REST now succeeds.
+	cm2 := &fakeDataClientManager{
+		commitFiles: map[string][]github.CommitFile{
+			"refs/heads/main": {{Filename: "main.go", Additions: 12}},
+		},
+	}
+	d2 := NewDataContainer(log.Default(), cm2, cfg)
+	d2.Cache = shared
+	d2.Data.Viewer = &github.Viewer{ID: "viewer-id"}
+	d2.Data.Repositories = []github.Repository{repo}
+	if err := d2.InitCommits(context.Background()); err != nil {
+		t.Fatalf("run 2 InitCommits error: %v", err)
+	}
+	if len(d2.Data.Commits) != 1 {
+		t.Fatalf("run 2: expected 1 commit, got %d", len(d2.Data.Commits))
+	}
+	if d2.Data.Commits[0].Languages["Go"] != 12 {
+		t.Errorf("run 2: expected recovered Go=12, got %v", d2.Data.Commits[0].Languages)
 	}
 }

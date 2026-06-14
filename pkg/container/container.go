@@ -294,13 +294,17 @@ func (d *DataContainer) InitCommits(ctx context.Context) error {
 			defer wg.Done()
 			progress := fmt.Sprintf("[%d/%d]", i+1, repoCount)
 
-			// Skip the network round-trip when this repo has not been pushed to since the cached snapshot
+			// Skip the commit-list round-trip when this repo has not been pushed to
+			// since the cached snapshot. We still run enrichment over the cached
+			// commits: the per-OID language cache makes already-analyzed commits
+			// free, while commits whose analysis previously failed (rate limit or a
+			// transient REST error) are retried instead of being stuck empty forever.
 			if d.Cache != nil {
 				if cached, ok := d.Cache.Lookup(repo.Url, repo.PushedAt); ok {
 					if !hiddenRepoInfo && !d.Config.SimpleLogs {
 						d.Logger.Printf("%s Reusing %d cached commits: %s\n", progress, len(cached), mask(repo.Name))
 					}
-					resultChan <- commitResult{commits: cached}
+					resultChan <- commitResult{commits: d.enrichCommitLanguages(ctx, repo, cached)}
 					return
 				}
 			}
