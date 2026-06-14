@@ -6,6 +6,9 @@ All notable changes to this project will be documented in this file. Format foll
 
 ## [Unreleased]
 
+### Changed
+- **Language statistics now reflect the lines you actually wrote.** `LANGUAGES_AND_TOOLS` and `LANGUAGE_PER_REPO` are computed from the files changed in your own commits (vendored/generated files excluded) instead of the whole-repo language bar of every repository you touched. Reported languages and percentages will change. The first run after upgrading is slower because each commit is analyzed once; results are cached per commit, so later runs stay fast.
+
 ## [1.5.9] - 2026-05-28
 
 ### Fixed
