@@ -216,7 +216,7 @@ func (d *DataContainer) InitRepositories(ctx context.Context) error {
 // A rate-limit response stops further REST calls for the run but leaves already
 // computed data intact; affected commits keep an empty language map and are
 // retried on the next run (they are not written to the OID cache).
-func (d *DataContainer) enrichCommitLanguages(ctx context.Context, repo github.Repository, commits []github.Commit) []github.Commit {
+func (d *DataContainer) enrichCommitLanguages(ctx context.Context, repo github.Repository, commits []github.Commit, semaphore chan struct{}) []github.Commit {
 	for i := range commits {
 		commits[i].RepoURL = repo.Url
 
@@ -240,7 +240,12 @@ func (d *DataContainer) enrichCommitLanguages(ctx context.Context, repo github.R
 			continue
 		}
 
+		// Bound concurrent REST calls across all repo goroutines so an uncached
+		// run does not fire one request per repository simultaneously (which would
+		// trip GitHub's secondary rate limit).
+		semaphore <- struct{}{}
 		files, err := d.ClientManager.GetCommitFiles(ctx, repo.Owner.Login, repo.Name, commits[i].OID)
+		<-semaphore
 		if err != nil {
 			if errors.Is(err, github.ErrRateLimited) {
 				d.langRateLimited.Store(true)
@@ -319,7 +324,7 @@ func (d *DataContainer) InitCommits(ctx context.Context) error {
 					if !hiddenRepoInfo && !d.Config.SimpleLogs {
 						d.Logger.Printf("%s Reusing %d cached commits: %s\n", progress, len(cached), mask(repo.Name))
 					}
-					resultChan <- commitResult{commits: d.enrichCommitLanguages(ctx, repo, cached)}
+					resultChan <- commitResult{commits: d.enrichCommitLanguages(ctx, repo, cached, semaphore)}
 					return
 				}
 			}
@@ -465,7 +470,7 @@ func (d *DataContainer) fetchRepoCommits(
 			return nil, err
 		}
 
-		return d.enrichCommitLanguages(ctx, repo, fetched), nil
+		return d.enrichCommitLanguages(ctx, repo, fetched, semaphore), nil
 	}
 
 	if !hiddenRepoInfo && !d.Config.SimpleLogs {
@@ -482,7 +487,7 @@ func (d *DataContainer) fetchRepoCommits(
 		return nil, fmt.Errorf("fetch commits for repo %s branch %s: %w", repo.Name, defaultBranch.Name, err)
 	}
 
-	return d.enrichCommitLanguages(ctx, repo, commits), nil
+	return d.enrichCommitLanguages(ctx, repo, commits, semaphore), nil
 }
 
 // InitWakaStats initializes the WakaTime statistics

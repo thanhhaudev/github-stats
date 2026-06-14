@@ -3,9 +3,11 @@ package container
 import (
 	"context"
 	"errors"
+	"fmt"
 	"log"
 	"strings"
 	"sync"
+	"sync/atomic"
 	"testing"
 	"time"
 
@@ -75,15 +77,21 @@ func (f *fakeDataClientManager) GetWakaTimeAllTimeSinceToday(ctx context.Context
 }
 
 func (f *fakeDataClientManager) GetCommitFiles(ctx context.Context, owner, name, sha string) ([]github.CommitFile, error) {
+	// Read config under the lock, then run the callback OUTSIDE it so concurrent
+	// calls are not serialized (concurrency tests rely on genuine parallelism).
 	f.mu.Lock()
-	defer f.mu.Unlock()
-	if f.commitFilesFn != nil {
-		return f.commitFilesFn(owner, name, sha)
+	fn := f.commitFilesFn
+	err := f.commitFilesErr
+	files := f.commitFiles[sha]
+	f.mu.Unlock()
+
+	if fn != nil {
+		return fn(owner, name, sha)
 	}
-	if f.commitFilesErr != nil {
-		return nil, f.commitFilesErr
+	if err != nil {
+		return nil, err
 	}
-	return f.commitFiles[sha], nil
+	return files, nil
 }
 
 // TestEnrichCommitLanguagesSkipsMergeCommits verifies merge commits (more than
@@ -108,7 +116,7 @@ func TestEnrichCommitLanguagesSkipsMergeCommits(t *testing.T) {
 	normal := github.Commit{OID: "normal"}
 	normal.Parents.TotalCount = 1
 
-	out := d.enrichCommitLanguages(context.Background(), repo, []github.Commit{merge, normal})
+	out := d.enrichCommitLanguages(context.Background(), repo, []github.Commit{merge, normal}, make(chan struct{}, 5))
 
 	if len(out[0].Languages) != 0 {
 		t.Errorf("merge commit must have no language attribution, got %v", out[0].Languages)
@@ -118,6 +126,48 @@ func TestEnrichCommitLanguagesSkipsMergeCommits(t *testing.T) {
 	}
 	if !called {
 		t.Error("expected a REST fetch for the non-merge commit")
+	}
+}
+
+// TestInitCommitsBoundsEnrichmentConcurrency verifies commit-file enrichment
+// across many repositories is capped by the shared semaphore, so an uncached run
+// does not fire one REST request per repository simultaneously.
+func TestInitCommitsBoundsEnrichmentConcurrency(t *testing.T) {
+	var current, peak int32
+	var mu sync.Mutex
+	cm := &fakeDataClientManager{
+		commitFilesFn: func(owner, name, sha string) ([]github.CommitFile, error) {
+			n := atomic.AddInt32(&current, 1)
+			mu.Lock()
+			if n > peak {
+				peak = n
+			}
+			mu.Unlock()
+			time.Sleep(5 * time.Millisecond) // hold the slot so overlap is observable
+			atomic.AddInt32(&current, -1)
+			return []github.CommitFile{{Filename: "main.go", Additions: 1}}, nil
+		},
+	}
+	cfg := &config.Config{OnlyMainBranch: true, SimpleLogs: true, ShowMetrics: []string{config.MetricLanguagesAndTools}}
+	d := NewDataContainer(log.Default(), cm, cfg)
+	d.Data.Viewer = &github.Viewer{ID: "viewer-id"}
+	for i := 0; i < 20; i++ {
+		r := github.Repository{Name: fmt.Sprintf("r%d", i), Url: fmt.Sprintf("https://github.com/me/r%d", i)}
+		r.Owner.Login = "me"
+		d.Data.Repositories = append(d.Data.Repositories, r)
+	}
+
+	if err := d.InitCommits(context.Background()); err != nil {
+		t.Fatalf("InitCommits error: %v", err)
+	}
+
+	mu.Lock()
+	defer mu.Unlock()
+	if peak == 0 {
+		t.Fatal("expected enrichment fetches to run")
+	}
+	if peak > 5 {
+		t.Errorf("peak concurrent commit-file fetches = %d, want <= 5", peak)
 	}
 }
 
