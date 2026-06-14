@@ -14,20 +14,8 @@ var Queries = map[string]string{
 			isPrivate
 			isFork
 			pushedAt
-			primaryLanguage {
-				name
-			}
-            owner {
+			owner {
                 login
-            }
-            languages(first: 10) {
-                edges {
-                    node {
-                        name
-                        color
-                    }
-                    size
-                }
             }
 		  }
 		  pageInfo {
@@ -50,20 +38,8 @@ var Queries = map[string]string{
 				isPrivate
 				isFork
 				pushedAt
-				primaryLanguage {
-					name
-				}
 				owner {
 					login
-				}
-				languages(first: 10) {
-					edges {
-						node {
-							name
-							color
-						}
-						size
-					}
 				}
 			}
 			pageInfo {
@@ -146,11 +122,6 @@ type GitHub struct {
 type PageInfo struct {
 	EndCursor   string `json:"endCursor"`
 	HasNextPage bool   `json:"hasNextPage"`
-}
-
-type Language struct {
-	Name  string `json:"name"`
-	Color string `json:"color"`
 }
 
 // NewGitHub creates a new GitHub
