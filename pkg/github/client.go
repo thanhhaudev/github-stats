@@ -149,38 +149,74 @@ func (c *Client) do(httpReq *http.Request, v interface{}) error {
 	return json.Unmarshal(body.Bytes(), v)
 }
 
-// GetWithContext performs a REST GET and decodes the JSON body into v.
-// A 429, or a 403 with X-RateLimit-Remaining: 0, is reported as ErrRateLimited
-// so callers can degrade gracefully instead of failing the whole run.
+// GetWithContext performs a REST GET against c.origin+path and decodes the JSON
+// body into v. A 429, or a 403 with X-RateLimit-Remaining: 0, is reported as
+// ErrRateLimited so callers can degrade gracefully instead of failing the run.
 func (c *Client) GetWithContext(ctx context.Context, path string, v interface{}) error {
+	_, err := c.getURL(ctx, c.origin+path, v)
+	return err
+}
+
+// getURL performs a REST GET against an absolute URL, decodes the JSON body into
+// v, and returns the response headers (so callers can follow Link pagination).
+// The rate-limit detection matches GetWithContext.
+func (c *Client) getURL(ctx context.Context, url string, v interface{}) (http.Header, error) {
 	select {
 	case <-ctx.Done():
-		return ctx.Err()
+		return nil, ctx.Err()
 	default:
 	}
 
-	req, err := http.NewRequestWithContext(ctx, http.MethodGet, c.origin+path, nil)
+	req, err := http.NewRequestWithContext(ctx, http.MethodGet, url, nil)
 	if err != nil {
-		return err
+		return nil, err
 	}
 	req.Header.Set("Authorization", "Bearer "+c.token)
 	req.Header.Set("Accept", "application/vnd.github+json")
 
 	resp, err := c.httpClient.Do(req)
 	if err != nil {
-		return err
+		return nil, err
 	}
 	defer func() { _ = resp.Body.Close() }()
 
 	if resp.StatusCode == http.StatusTooManyRequests ||
 		(resp.StatusCode == http.StatusForbidden && resp.Header.Get("X-RateLimit-Remaining") == "0") {
-		return ErrRateLimited
+		return nil, ErrRateLimited
 	}
 	if resp.StatusCode != http.StatusOK {
-		return fmt.Errorf("unexpected status code: %d", resp.StatusCode)
+		return nil, fmt.Errorf("unexpected status code: %d", resp.StatusCode)
 	}
 
-	return json.NewDecoder(resp.Body).Decode(v)
+	if err := json.NewDecoder(resp.Body).Decode(v); err != nil {
+		return nil, err
+	}
+
+	return resp.Header, nil
+}
+
+// nextLink returns the rel="next" URL from an RFC 5988 Link header, or "" when
+// there is no next page.
+func nextLink(header string) string {
+	for _, part := range strings.Split(header, ",") {
+		segments := strings.Split(part, ";")
+		if len(segments) < 2 {
+			continue
+		}
+
+		url := strings.TrimSpace(segments[0])
+		if !strings.HasPrefix(url, "<") || !strings.HasSuffix(url, ">") {
+			continue
+		}
+
+		for _, attr := range segments[1:] {
+			if strings.TrimSpace(attr) == `rel="next"` {
+				return url[1 : len(url)-1]
+			}
+		}
+	}
+
+	return ""
 }
 
 // NewClient creates a new GitHub client

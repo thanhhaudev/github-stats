@@ -81,19 +81,38 @@ type CommitFile struct {
 	Deletions int    `json:"deletions"`
 }
 
+// commitFilesCap mirrors GitHub's hard limit of 3000 files returned for a single
+// commit across all pages.
+const commitFilesCap = 3000
+
 // CommitFiles fetches the files changed by a single commit via the REST API.
-// GitHub returns at most 300 files per commit; that truncation is acceptable.
+// GitHub returns up to 300 files in the first response and exposes the rest
+// through Link-header pagination, up to a hard cap of 3000 files. We follow the
+// rel="next" links so commits with more than 300 changed files are not silently
+// undercounted.
 func (r *RepositoryService) CommitFiles(ctx context.Context, owner, name, sha string) ([]CommitFile, error) {
-	var detail struct {
-		Files []CommitFile `json:"files"`
+	url := r.Client.origin + fmt.Sprintf("/repos/%s/%s/commits/%s", owner, name, sha)
+
+	var files []CommitFile
+	for url != "" {
+		var page struct {
+			Files []CommitFile `json:"files"`
+		}
+
+		header, err := r.Client.getURL(ctx, url, &page)
+		if err != nil {
+			return nil, err
+		}
+
+		files = append(files, page.Files...)
+		if len(files) >= commitFilesCap {
+			break
+		}
+
+		url = nextLink(header.Get("Link"))
 	}
 
-	path := fmt.Sprintf("/repos/%s/%s/commits/%s", owner, name, sha)
-	if err := r.Client.GetWithContext(ctx, path, &detail); err != nil {
-		return nil, err
-	}
-
-	return detail.Files, nil
+	return files, nil
 }
 
 // Commits returns the commits of a repository

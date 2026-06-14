@@ -50,3 +50,30 @@ func TestGetWithContextReportsRateLimit(t *testing.T) {
 		t.Fatalf("expected ErrRateLimited, got %v", err)
 	}
 }
+
+func TestCommitFilesFollowsLinkPagination(t *testing.T) {
+	var srv *httptest.Server
+	srv = httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		if r.URL.Query().Get("page") == "2" {
+			_, _ = w.Write([]byte(`{"files":[{"filename":"b.py","additions":2}]}`))
+			return
+		}
+		// First page advertises a next page via the Link header (RFC 5988),
+		// exactly like GitHub does for commits with more than 300 files.
+		w.Header().Set("Link", "<"+srv.URL+"/next?page=2>; rel=\"next\", <"+srv.URL+"/next?page=2>; rel=\"last\"")
+		_, _ = w.Write([]byte(`{"files":[{"filename":"a.go","additions":1}]}`))
+	}))
+	defer srv.Close()
+
+	c := NewClient("tok", false, false)
+	c.origin = srv.URL
+	svc := &RepositoryService{Client: c}
+
+	files, err := svc.CommitFiles(context.Background(), "o", "n", "sha")
+	if err != nil {
+		t.Fatalf("CommitFiles error: %v", err)
+	}
+	if len(files) != 2 || files[0].Filename != "a.go" || files[1].Filename != "b.py" {
+		t.Fatalf("expected files from both pages, got %+v", files)
+	}
+}
