@@ -41,3 +41,48 @@ func TestColorReturnsHexAndFallback(t *testing.T) {
 		t.Errorf("Color fallback = %q, want #ededed", c)
 	}
 }
+
+func TestFromFilesDropsAmbiguousExtensions(t *testing.T) {
+	files := []github.CommitFile{
+		{Filename: "src/foo.h", Additions: 100}, // ambiguous C/C++/Obj-C -> dropped
+		{Filename: "src/bar.m", Additions: 100}, // ambiguous Obj-C/MATLAB -> dropped
+		{Filename: "src/baz.c", Additions: 5},   // unambiguous C
+		{Filename: "src/qux.mm", Additions: 7},  // unambiguous Objective-C++
+	}
+
+	got := FromFiles(files)
+
+	if got["C"] != 5 {
+		t.Errorf("C = %d, want 5 (only .c counted, .h dropped)", got["C"])
+	}
+	if got["Objective-C++"] != 7 {
+		t.Errorf("Objective-C++ = %d, want 7", got["Objective-C++"])
+	}
+	if _, ok := got["Objective-C"]; ok {
+		t.Errorf("ambiguous .m must not be credited to Objective-C, got %v", got)
+	}
+	if len(got) != 2 {
+		t.Errorf("expected only C and Objective-C++, got %v", got)
+	}
+}
+
+func TestFromFilesExcludesMoreVendorAndGenerated(t *testing.T) {
+	files := []github.CommitFile{
+		{Filename: "Pods/Lib/Source.swift", Additions: 100},             // vendored
+		{Filename: "Carthage/Build/x.swift", Additions: 100},            // vendored
+		{Filename: "external/dep/a.go", Additions: 100},                 // vendored
+		{Filename: "deps/elixir_thing/b.go", Additions: 100},            // vendored
+		{Filename: "app/Form.designer.cs", Additions: 100},              // generated
+		{Filename: "target/generated-sources/Gen.java", Additions: 100}, // generated
+		{Filename: "src/real.go", Additions: 8},                         // counted
+	}
+
+	got := FromFiles(files)
+
+	if got["Go"] != 8 {
+		t.Errorf("Go = %d, want 8 (only src/real.go)", got["Go"])
+	}
+	if len(got) != 1 {
+		t.Errorf("expected only Go after exclusions, got %v", got)
+	}
+}

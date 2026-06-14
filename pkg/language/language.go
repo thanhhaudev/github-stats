@@ -27,13 +27,15 @@ var languages = []langDef{
 	{"Python", "#3572A5", []string{".py", ".pyw"}},
 	{"Java", "#b07219", []string{".java"}},
 	{"Kotlin", "#A97BFF", []string{".kt", ".kts"}},
-	{"C", "#555555", []string{".c", ".h"}},
+	// .h (C/C++/Obj-C) and .m (Obj-C/MATLAB) are ambiguous without content
+	// analysis, so they are intentionally omitted: under-counting an obscure
+	// header is safer than crediting a language the user never wrote.
+	{"C", "#555555", []string{".c"}},
 	{"C++", "#f34b7d", []string{".cpp", ".cc", ".cxx", ".c++", ".hpp", ".hh", ".hxx"}},
 	{"C#", "#178600", []string{".cs"}},
 	{"Ruby", "#701516", []string{".rb"}},
 	{"PHP", "#4F5D95", []string{".php"}},
 	{"Swift", "#F05138", []string{".swift"}},
-	{"Objective-C", "#438eff", []string{".m"}},
 	{"Objective-C++", "#6866fb", []string{".mm"}},
 	{"Scala", "#c22d40", []string{".scala", ".sc"}},
 	{"Rust", "#dea584", []string{".rs"}},
@@ -91,6 +93,10 @@ var vendorSegments = map[string]struct{}{
 	"dist":             {},
 	"third_party":      {},
 	".yarn":            {},
+	"pods":             {}, // CocoaPods
+	"carthage":         {}, // Carthage
+	"external":         {}, // Bazel external deps
+	"deps":             {}, // Elixir / general dependency dirs
 }
 
 func isVendor(path string) bool {
@@ -110,12 +116,14 @@ func isGenerated(path string) bool {
 		return true
 	case strings.HasSuffix(p, ".pb.go"), strings.HasSuffix(p, "_pb2.py"):
 		return true
+	case strings.HasSuffix(p, ".designer.cs"): // .NET designer-generated
+		return true
 	case strings.Contains(p, "_generated."):
 		return true
 	}
 
 	for _, seg := range strings.Split(p, "/") {
-		if seg == "generated" {
+		if seg == "generated" || seg == "generated-sources" {
 			return true
 		}
 	}
