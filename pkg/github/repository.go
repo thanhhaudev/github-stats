@@ -2,6 +2,7 @@ package github
 
 import (
 	"context"
+	"fmt"
 	"time"
 )
 
@@ -85,6 +86,21 @@ type CommitFile struct {
 	Filename  string `json:"filename"`
 	Additions int    `json:"additions"`
 	Deletions int    `json:"deletions"`
+}
+
+// CommitFiles fetches the files changed by a single commit via the REST API.
+// GitHub returns at most 300 files per commit; that truncation is acceptable.
+func (r *RepositoryService) CommitFiles(ctx context.Context, owner, name, sha string) ([]CommitFile, error) {
+	var detail struct {
+		Files []CommitFile `json:"files"`
+	}
+
+	path := fmt.Sprintf("/repos/%s/%s/commits/%s", owner, name, sha)
+	if err := r.Client.GetWithContext(ctx, path, &detail); err != nil {
+		return nil, err
+	}
+
+	return detail.Files, nil
 }
 
 // Commits returns the commits of a repository

@@ -4,6 +4,7 @@ import (
 	"bytes"
 	"context"
 	"encoding/json"
+	"errors"
 	"fmt"
 	"net/http"
 	"strings"
@@ -29,6 +30,10 @@ type GraphQLError struct {
 type Response struct {
 	Errors []GraphQLError `json:"errors"`
 }
+
+// ErrRateLimited signals that GitHub returned a primary/secondary rate-limit
+// response. Callers should stop issuing further REST calls for this run.
+var ErrRateLimited = errors.New("github rest rate limit reached")
 
 type Request struct {
 	Query     string                 `json:"query"`
@@ -142,6 +147,40 @@ func (c *Client) do(httpReq *http.Request, v interface{}) error {
 	}
 
 	return json.Unmarshal(body.Bytes(), v)
+}
+
+// GetWithContext performs a REST GET and decodes the JSON body into v.
+// A 429, or a 403 with X-RateLimit-Remaining: 0, is reported as ErrRateLimited
+// so callers can degrade gracefully instead of failing the whole run.
+func (c *Client) GetWithContext(ctx context.Context, path string, v interface{}) error {
+	select {
+	case <-ctx.Done():
+		return ctx.Err()
+	default:
+	}
+
+	req, err := http.NewRequestWithContext(ctx, http.MethodGet, c.origin+path, nil)
+	if err != nil {
+		return err
+	}
+	req.Header.Set("Authorization", "Bearer "+c.token)
+	req.Header.Set("Accept", "application/vnd.github+json")
+
+	resp, err := c.httpClient.Do(req)
+	if err != nil {
+		return err
+	}
+	defer func() { _ = resp.Body.Close() }()
+
+	if resp.StatusCode == http.StatusTooManyRequests ||
+		(resp.StatusCode == http.StatusForbidden && resp.Header.Get("X-RateLimit-Remaining") == "0") {
+		return ErrRateLimited
+	}
+	if resp.StatusCode != http.StatusOK {
+		return fmt.Errorf("unexpected status code: %d", resp.StatusCode)
+	}
+
+	return json.NewDecoder(resp.Body).Decode(v)
 }
 
 // NewClient creates a new GitHub client
