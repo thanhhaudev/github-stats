@@ -419,3 +419,27 @@ func TestLoad_WakaTimeDroppedOnSchemaMismatch(t *testing.T) {
 		t.Error("expected WakaTime snapshot dropped on a schema-version mismatch")
 	}
 }
+
+func TestCommitLanguagesLookupSetPrune(t *testing.T) {
+	c := &Cache{Repos: map[string]*RepoEntry{}}
+
+	if _, ok := c.LookupCommitLanguages("oid1"); ok {
+		t.Fatal("expected miss on empty cache")
+	}
+
+	c.SetCommitLanguages("oid1", map[string]int{"Go": 10})
+	c.SetCommitLanguages("oid2", map[string]int{"CSS": 4})
+
+	got, ok := c.LookupCommitLanguages("oid1")
+	if !ok || got["Go"] != 10 {
+		t.Fatalf("LookupCommitLanguages(oid1) = %v, ok=%v", got, ok)
+	}
+
+	c.PruneCommitLanguages([]string{"oid1"})
+	if _, ok := c.LookupCommitLanguages("oid2"); ok {
+		t.Fatal("expected oid2 pruned")
+	}
+	if _, ok := c.LookupCommitLanguages("oid1"); !ok {
+		t.Fatal("expected oid1 retained")
+	}
+}

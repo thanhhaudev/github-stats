@@ -20,7 +20,7 @@ import (
 // RepoSchemaVersion bumps whenever the repo-commit on-disk format changes
 // incompatibly. A mismatch drops the cached repos (one slow run after the
 // upgrade) but leaves the WakaTime snapshot intact.
-const RepoSchemaVersion = 2
+const RepoSchemaVersion = 3
 
 // WakaTimeSchemaVersion bumps whenever the WakaTime snapshot on-disk format
 // changes incompatibly. It is independent of RepoSchemaVersion so a repo-commit
@@ -53,6 +53,10 @@ type Cache struct {
 	OnlyMainBranch bool                  `json:"onlyMainBranch"`
 	Repos          map[string]*RepoEntry `json:"repos"`
 	WakaTime       *WakaTimeEntry        `json:"wakaTime,omitempty"`
+	// CommitLanguages caches language -> additions per immutable commit OID.
+	// Keyed independently of Repos so it survives a repo's pushedAt advancing:
+	// a new push re-fetches the commit list but only genuinely new OIDs hit REST.
+	CommitLanguages map[string]map[string]int `json:"commitLanguages,omitempty"`
 
 	mu sync.Mutex
 }
@@ -63,9 +67,10 @@ type Cache struct {
 // WakaTime snapshot. A missing or malformed file yields an empty cache.
 func Load(path string, onlyMainBranch bool) *Cache {
 	fresh := &Cache{
-		Version:        RepoSchemaVersion,
-		OnlyMainBranch: onlyMainBranch,
-		Repos:          make(map[string]*RepoEntry),
+		Version:         RepoSchemaVersion,
+		OnlyMainBranch:  onlyMainBranch,
+		Repos:           make(map[string]*RepoEntry),
+		CommitLanguages: make(map[string]map[string]int),
 	}
 
 	data, err := os.ReadFile(path)
@@ -82,6 +87,7 @@ func Load(path string, onlyMainBranch bool) *Cache {
 	// Repo-commit section: usable only when its schema and branch mode match.
 	if c.Version != RepoSchemaVersion || c.OnlyMainBranch != onlyMainBranch || c.Repos == nil {
 		c.Repos = make(map[string]*RepoEntry)
+		c.CommitLanguages = make(map[string]map[string]int)
 	}
 
 	// WakaTime section: validated on its own version, independent of the repo
@@ -106,6 +112,10 @@ func Load(path string, onlyMainBranch bool) *Cache {
 	// Normalize identity fields so the next Save writes the current schema.
 	c.Version = RepoSchemaVersion
 	c.OnlyMainBranch = onlyMainBranch
+
+	if c.CommitLanguages == nil {
+		c.CommitLanguages = make(map[string]map[string]int)
+	}
 
 	return &c
 }
@@ -211,6 +221,45 @@ func (c *Cache) Prune(keepURLs []string) {
 	for url := range c.Repos {
 		if _, ok := keep[url]; !ok {
 			delete(c.Repos, url)
+		}
+	}
+}
+
+// LookupCommitLanguages returns the cached language->additions map for a commit
+// OID. ok=false means the caller must fetch and analyze the commit.
+func (c *Cache) LookupCommitLanguages(oid string) (map[string]int, bool) {
+	c.mu.Lock()
+	defer c.mu.Unlock()
+
+	langs, ok := c.CommitLanguages[oid]
+	return langs, ok
+}
+
+// SetCommitLanguages stores the analyzed languages for an immutable commit OID.
+func (c *Cache) SetCommitLanguages(oid string, langs map[string]int) {
+	c.mu.Lock()
+	defer c.mu.Unlock()
+
+	if c.CommitLanguages == nil {
+		c.CommitLanguages = make(map[string]map[string]int)
+	}
+	c.CommitLanguages[oid] = langs
+}
+
+// PruneCommitLanguages drops OID entries not present in keepOIDs so the cache
+// does not grow without bound as commits/repos disappear.
+func (c *Cache) PruneCommitLanguages(keepOIDs []string) {
+	c.mu.Lock()
+	defer c.mu.Unlock()
+
+	keep := make(map[string]struct{}, len(keepOIDs))
+	for _, o := range keepOIDs {
+		keep[o] = struct{}{}
+	}
+
+	for oid := range c.CommitLanguages {
+		if _, ok := keep[oid]; !ok {
+			delete(c.CommitLanguages, oid)
 		}
 	}
 }
