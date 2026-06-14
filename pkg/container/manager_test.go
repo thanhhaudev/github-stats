@@ -47,6 +47,10 @@ func (f *fakeRepositoryService) DefaultBranch(ctx context.Context, request *gith
 	return nil, nil
 }
 
+func (f *fakeRepositoryService) CommitFiles(ctx context.Context, owner, name, sha string) ([]github.CommitFile, error) {
+	return nil, nil
+}
+
 func TestClientManagerGetBranchesPaginatesWithCursor(t *testing.T) {
 	repos := &fakeRepositoryService{}
 	cm := &ClientManager{repositories: repos}

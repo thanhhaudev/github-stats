@@ -47,6 +47,7 @@ type dataClientManager interface {
 	GetContributedToRepositories(ctx context.Context, username string, numRepos int) ([]github.Repository, error)
 	GetBranches(ctx context.Context, owner, name string, numBranches int) ([]github.Branch, error)
 	GetCommits(ctx context.Context, owner, name, authorID, branch string, numCommits int) ([]github.Commit, error)
+	GetCommitFiles(ctx context.Context, owner, name, sha string) ([]github.CommitFile, error)
 	GetDefaultBranch(ctx context.Context, owner, name string) (*github.Branch, error)
 	GetWakaTimeStats(ctx context.Context) (*wakatime.Stats, error)
 	GetWakaTimeAllTimeSinceToday(ctx context.Context) (*wakatime.AllTimeSinceTodayStats, error)

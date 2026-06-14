@@ -15,13 +15,15 @@ import (
 )
 
 type fakeDataClientManager struct {
-	mu         sync.Mutex
-	branches   []github.Branch
-	commitErr  error
-	commitRefs []string
-	wakaStats  *wakatime.Stats
-	allTime    *wakatime.AllTimeSinceTodayStats
-	allTimeErr error
+	mu             sync.Mutex
+	branches       []github.Branch
+	commitErr      error
+	commitRefs     []string
+	wakaStats      *wakatime.Stats
+	allTime        *wakatime.AllTimeSinceTodayStats
+	allTimeErr     error
+	commitFiles    map[string][]github.CommitFile
+	commitFilesErr error
 }
 
 func (f *fakeDataClientManager) HasGitHubClient() bool {
@@ -68,6 +70,15 @@ func (f *fakeDataClientManager) GetWakaTimeStats(ctx context.Context) (*wakatime
 
 func (f *fakeDataClientManager) GetWakaTimeAllTimeSinceToday(ctx context.Context) (*wakatime.AllTimeSinceTodayStats, error) {
 	return f.allTime, f.allTimeErr
+}
+
+func (f *fakeDataClientManager) GetCommitFiles(ctx context.Context, owner, name, sha string) ([]github.CommitFile, error) {
+	f.mu.Lock()
+	defer f.mu.Unlock()
+	if f.commitFilesErr != nil {
+		return nil, f.commitFilesErr
+	}
+	return f.commitFiles[sha], nil
 }
 
 func TestDataContainerInitCommitsReturnsBranchError(t *testing.T) {

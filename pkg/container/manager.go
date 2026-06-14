@@ -28,6 +28,7 @@ type repositoryService interface {
 	Owned(ctx context.Context, request *github.Request) (*github.Repositories, error)
 	ContributedTo(ctx context.Context, request *github.Request) (*github.Repositories, error)
 	DefaultBranch(ctx context.Context, request *github.Request) (*github.Branch, error)
+	CommitFiles(ctx context.Context, owner, name, sha string) ([]github.CommitFile, error)
 }
 
 type viewerService interface {
@@ -71,6 +72,11 @@ func (c *ClientManager) GetCommits(ctx context.Context, owner, name, authorID, b
 	}
 
 	return allCommits, nil
+}
+
+// GetCommitFiles returns the files changed by a single commit.
+func (c *ClientManager) GetCommitFiles(ctx context.Context, owner, name, sha string) ([]github.CommitFile, error) {
+	return c.repositories.CommitFiles(ctx, owner, name, sha)
 }
 
 // GetBranches returns the branches of a repository
