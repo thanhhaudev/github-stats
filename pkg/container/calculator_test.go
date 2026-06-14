@@ -216,6 +216,12 @@ func TestCalculateLanguagesFromCommits(t *testing.T) {
 		{OID: "b", RepoURL: "r1", Languages: map[string]int{"Go": 50}},
 		{OID: "c", RepoURL: "r2", Languages: map[string]int{"CSS": 200}},
 	}
+	// Per-repo contributions are tracked separately from the deduped commit list
+	// (InitCommits populates this); RepoCount is derived from it.
+	d.Data.RepoLanguages = map[string]map[string]int{
+		"r1": {"Go": 150, "CSS": 10},
+		"r2": {"CSS": 200},
+	}
 
 	got := d.CalculateLanguages()
 

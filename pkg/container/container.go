@@ -33,9 +33,15 @@ type DataContainer struct {
 	Clock         clock.Clock
 	Cache         *cache.Cache // nil when caching is disabled
 	Data          struct {
-		Viewer          *github.Viewer
-		Repositories    []github.Repository
-		Commits         []github.Commit
+		Viewer       *github.Viewer
+		Repositories []github.Repository
+		Commits      []github.Commit
+		// RepoLanguages holds per-repository language contributions (repoURL ->
+		// language -> additions). Unlike Commits, it is NOT deduplicated across
+		// repositories: a commit shared by two repos (e.g. an upstream the user
+		// also owns) contributes to each repo's profile, so the per-repo metric
+		// stays correct and deterministic regardless of global OID dedup.
+		RepoLanguages   map[string]map[string]int
 		WakaTime        *wakatime.Stats
 		WakaTimeAllTime *wakatime.AllTimeSinceTodayStats
 	}
@@ -330,11 +336,28 @@ func (d *DataContainer) InitCommits(ctx context.Context) error {
 		close(resultChan)
 	}()
 
+	repoLanguages := make(map[string]map[string]int) // repoURL -> language -> additions
+	repoSeenOIDs := make(map[string]map[string]bool) // repoURL -> oid -> seen (dedup branches within a repo)
 	for result := range resultChan {
 		if result.err != nil {
 			return result.err
 		}
 		for _, commit := range result.commits {
+			// Per-repo attribution: count each repo's own commits (deduped by OID
+			// within that repo only). A commit shared across repos contributes to
+			// each one, so the per-repo metric does not depend on global dedup order.
+			if repoSeenOIDs[commit.RepoURL] == nil {
+				repoSeenOIDs[commit.RepoURL] = make(map[string]bool)
+				repoLanguages[commit.RepoURL] = make(map[string]int)
+			}
+			if !repoSeenOIDs[commit.RepoURL][commit.OID] {
+				repoSeenOIDs[commit.RepoURL][commit.OID] = true
+				for lang, additions := range commit.Languages {
+					repoLanguages[commit.RepoURL][lang] += additions
+				}
+			}
+
+			// Global dedup: each commit counted once for totals/commit-count/streaks.
 			if !seenOIDs[commit.OID] {
 				seenOIDs[commit.OID] = true
 				commit.CommittedDate = d.Clock.ToClockTz(commit.CommittedDate)
@@ -342,6 +365,7 @@ func (d *DataContainer) InitCommits(ctx context.Context) error {
 			}
 		}
 	}
+	d.Data.RepoLanguages = repoLanguages
 
 	if d.Cache != nil {
 		liveOIDs := make([]string, 0, len(seenOIDs))

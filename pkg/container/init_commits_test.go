@@ -227,3 +227,42 @@ func TestInitCommitsRecoversAfterRateLimitedRunWithUnchangedPush(t *testing.T) {
 		t.Errorf("run 2: expected recovered Go=12, got %v", d2.Data.Commits[0].Languages)
 	}
 }
+
+// TestInitCommitsPerRepoLanguagesSurviveGlobalDedup verifies that a commit shared
+// by two repositories (same OID — e.g. an upstream the user also owns) is counted
+// once in the totals but attributed to BOTH repos for the per-repo metric, rather
+// than being collapsed nondeterministically to a single repo by global OID dedup.
+func TestInitCommitsPerRepoLanguagesSurviveGlobalDedup(t *testing.T) {
+	cm := &fakeDataClientManager{
+		commitFiles: map[string][]github.CommitFile{
+			// The fake's GetCommits returns OID == branch ref, so both repos
+			// produce the same commit OID "refs/heads/main".
+			"refs/heads/main": {{Filename: "main.go", Additions: 10}},
+		},
+	}
+	cfg := &config.Config{OnlyMainBranch: true, SimpleLogs: true}
+	d := NewDataContainer(log.Default(), cm, cfg)
+	d.Data.Viewer = &github.Viewer{ID: "viewer-id"}
+	repoA := github.Repository{Name: "repo-a", Url: "https://github.com/me/repo-a"}
+	repoA.Owner.Login = "me"
+	repoB := github.Repository{Name: "repo-b", Url: "https://github.com/up/repo-b"}
+	repoB.Owner.Login = "up"
+	d.Data.Repositories = []github.Repository{repoA, repoB}
+
+	if err := d.InitCommits(context.Background()); err != nil {
+		t.Fatalf("InitCommits error: %v", err)
+	}
+
+	// Global dedup: the shared OID is stored once for commit-count/total metrics.
+	if len(d.Data.Commits) != 1 {
+		t.Fatalf("expected 1 globally-deduped commit, got %d", len(d.Data.Commits))
+	}
+
+	lang := d.CalculateLanguages()
+	if lang.TotalSize != 10 {
+		t.Errorf("TotalSize = %d, want 10 (shared commit counted once)", lang.TotalSize)
+	}
+	if lang.RepoCount["Go"] != 2 {
+		t.Errorf("RepoCount[Go] = %d, want 2 (both repos attributed); full=%v", lang.RepoCount["Go"], lang.RepoCount)
+	}
+}

@@ -109,15 +109,10 @@ func (d *DataContainer) CalculateCommits() *CommitStats {
 func (d *DataContainer) CalculateLanguages() *LanguageStats {
 	totalLanguages := make(map[string][2]interface{}) // [name]{color, size}
 	totalSize := 0
-	perRepo := make(map[string]map[string]int) // repoURL -> language -> additions
 
+	// Totals are derived from the globally-deduplicated commit list so a commit
+	// shared by several repositories is counted once.
 	for _, commit := range d.Data.Commits {
-		repo := perRepo[commit.RepoURL]
-		if repo == nil {
-			repo = make(map[string]int)
-			perRepo[commit.RepoURL] = repo
-		}
-
 		for name, size := range commit.Languages {
 			if existing, ok := totalLanguages[name]; ok {
 				existing[1] = existing[1].(int) + size
@@ -126,12 +121,13 @@ func (d *DataContainer) CalculateLanguages() *LanguageStats {
 				totalLanguages[name] = [2]interface{}{language.Color(name), size}
 			}
 			totalSize += size
-			repo[name] += size
 		}
 	}
 
+	// Per-repo counts use the per-repository contributions, which (unlike the
+	// commit list) are not collapsed across repos by global OID dedup.
 	repoCount := make(map[string]int)
-	for _, langs := range perRepo {
+	for _, langs := range d.Data.RepoLanguages {
 		top := dominantLanguage(langs)
 		if top != "" {
 			repoCount[top]++
