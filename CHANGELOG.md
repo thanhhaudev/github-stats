@@ -6,6 +6,8 @@ All notable changes to this project will be documented in this file. Format foll
 
 ## [Unreleased]
 
+## [1.6.0] - 2026-06-14
+
 ### Changed
 - **Language statistics now reflect the lines you actually wrote.** `LANGUAGES_AND_TOOLS` and `LANGUAGE_PER_REPO` are computed from the files changed in your own commits (vendored and generated files excluded, and merge commits skipped so code merged from others' PRs is not credited to you) instead of the whole-repo language bar of every repository you touched. Reported languages and percentages will change. The first run after upgrading is slower because each commit is analyzed once; results are cached per commit, so later runs stay fast.
 
@@ -78,7 +80,8 @@ All notable changes to this project will be documented in this file. Format foll
 ### Fixed
 - AI footprint row label: `Total Prompt Chars` (raw `ai_prompt_length`) replaces the misleading `Average Prompt` while WakaTime omits `ai_average_prompt_length` from `/stats`. Reverts to `Average Prompt` automatically once the field appears.
 
-[Unreleased]: https://github.com/thanhhaudev/github-stats/compare/v1.5.9...HEAD
+[Unreleased]: https://github.com/thanhhaudev/github-stats/compare/v1.6.0...HEAD
+[1.6.0]: https://github.com/thanhhaudev/github-stats/releases/tag/v1.6.0
 [1.5.9]: https://github.com/thanhhaudev/github-stats/releases/tag/v1.5.9
 [1.5.8]: https://github.com/thanhhaudev/github-stats/releases/tag/v1.5.8
 [1.5.7]: https://github.com/thanhhaudev/github-stats/releases/tag/v1.5.7
