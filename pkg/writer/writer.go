@@ -349,9 +349,10 @@ func MakeCommitDaysOfWeekList(wd map[time.Weekday]int, total int, version string
 	return boldTitle(fmt.Sprintf("📅 I'm Most Productive on %s", topName)) + "\n\n" + "```text" + makeList(data, version) + "```\n\n"
 }
 
-// MakeLanguagePerRepoList returns a list of languages and the percentage of repositories that use them
-func MakeLanguagePerRepoList(r []github.Repository, version string) string {
-	if len(r) == 0 {
+// MakeLanguagePerRepoList renders the "I Mostly Code in X" block. The input maps
+// a language to the number of repos where it is the user's most-used language.
+func MakeLanguagePerRepoList(repoLangCount map[string]int, version string) string {
+	if len(repoLangCount) == 0 {
 		return ""
 	}
 
@@ -360,25 +361,14 @@ func MakeLanguagePerRepoList(r []github.Repository, version string) string {
 		topName string
 		topNum  int
 		data    []Data
-		repos   = make(map[string]int)
 	)
 
-	for _, v := range r {
-		if v.PrimaryLanguage == nil {
-			continue // Skip repositories without a primary language
-		}
-
-		repos[v.PrimaryLanguage.Name]++
-		count++
+	for _, n := range repoLangCount {
+		count += float64(n)
 	}
 
-	if len(repos) == 0 {
-		return ""
-	}
-
-	// Create a list of Data structs
-	for _, name := range sortMapByValue(repos) {
-		num := repos[name]
+	for _, name := range sortMapByValue(repoLangCount) {
+		num := repoLangCount[name]
 		if num > topNum { // find top language
 			topNum = num
 			topName = name

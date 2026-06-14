@@ -65,7 +65,7 @@ func (d *DataContainer) metrics(com *CommitStats, lang *LanguageStats, ai *AISta
 		aiBlock = writer.MakeAIStatsList(ai.AIAdditions, ai.HumanAdditions, ai.AIInputTokens, ai.AIOutputTokens, ai.AvgPromptLength, d.Config.WakaTimeRange)
 	}
 	return map[string]string{
-		config.MetricLanguagePerRepo:   writer.MakeLanguagePerRepoList(d.Data.Repositories, version),
+		config.MetricLanguagePerRepo:   writer.MakeLanguagePerRepoList(lang.RepoCount, version),
 		config.MetricLanguagesAndTools: writer.MakeLanguageAndToolList(lang.Languages, lang.TotalSize),
 		config.MetricCommitDaysOfWeek:  writer.MakeCommitDaysOfWeekList(com.DailyCommits, com.TotalCommits, version),
 		config.MetricCommitTimesOfDay:  writer.MakeCommitTimesOfDayList(d.Data.Commits, d.Config.SimplifyCommitTimesTitle, version),

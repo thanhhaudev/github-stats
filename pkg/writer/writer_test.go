@@ -612,16 +612,9 @@ func TestTitleStrip_AcrossMakers(t *testing.T) {
 	})
 
 	t.Run("MakeLanguagePerRepoList", func(t *testing.T) {
-		// PrimaryLanguage is *struct{ Name string `json:"name"` } in the actual Repository type.
-		// Build the repo via a temporary variable to satisfy the exact anonymous-struct type.
-		var repo github.Repository
-		repo.Name = "y"
-		repo.PrimaryLanguage = &struct {
-			Name string `json:"name"`
-		}{Name: "Go"}
-		repos := []github.Repository{repo}
+		repoLangCount := map[string]int{"Go": 1}
 		setStripModeForTest(t, config.StripEmojiTitle)
-		got := MakeLanguagePerRepoList(repos, "1")
+		got := MakeLanguagePerRepoList(repoLangCount, "1")
 		if !strings.Contains(got, "**I Mostly Code in Go**") {
 			t.Errorf("expected stripped title; got:\n%s", got)
 		}
